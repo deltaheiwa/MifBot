@@ -438,6 +438,7 @@ async def nsfw(ctx):
         songs = []
         for song in os.listdir("./vcPlay"):
             songs.append(song)
+        songs.insert(0,"a_normal.mp3")
         n = random.randint(1, 100)
         if n > (len(songs)-1):
             n = 0
