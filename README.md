@@ -1,3 +1,0 @@
-# Mif Bot
-
-## Stable version
