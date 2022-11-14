@@ -1581,9 +1581,9 @@ def add_rickroll_stats(member: discord.Member, list_of_users: list):
                         rickroll_stat = slct_query(member.id)
                         try:
                             if rickroll_stat != None: rickroll_stat['rickroll']['themselves'] += 1
-                            else: rickroll_stat['bot_stats'] = { "themselves": 1, "others": 0 }
-                        except KeyError:
-                            rickroll_stat['bot_stats'] = { "themselves": 1, "others": 0 }
+                            else: rickroll_stat = { "rickroll": { "themselves": 1, "others": 0 } }
+                        except KeyError or TypeError:
+                            rickroll_stat = { "rickroll": { "themselves": 1, "others": 0 } }
                         updt_query(member.id, update_data=rickroll_stat)
         finally:
             connection.close()
