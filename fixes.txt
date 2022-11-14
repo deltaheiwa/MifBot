@@ -1,0 +1,7 @@
+Case-sensitive mysql
+Fixed syntax error in .wallet 
+.lichesscommand -> .lichessplayer
+
+rank icon 38. BOT STATS. CHECK DC
+channel permissions
+fixed select menu in help command

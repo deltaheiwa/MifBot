@@ -1,0 +1,7 @@
+creds/
+.vscode/
+.idea/
+__pycache__/
+ffmpeg.exe
+TODO
+*.log
