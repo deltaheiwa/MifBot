@@ -432,7 +432,7 @@ async def ping(ctx, arg=None):
 @bot.command()
 async def nsfw(ctx):
     voice_state = ctx.author.voice
-    guild=ctx.guild
+    guild = ctx.guild
     
     def play_song(vc):
         songs = []
@@ -469,7 +469,7 @@ async def nsfw(ctx):
             await vc.disconnect()
         elif channel is not None and voice_clients is not None:
             await ctx.send("Redirecting...")
-            await voice_clients.disconnect()
+            await voice_clients.disconnect(force=True)
             await channel.connect()
             vc = discord.utils.get(bot.voice_clients, guild=guild)
             play_song(vc)

@@ -1,1 +1,3 @@
-# productionBot
+# Mif Bot
+
+## Stable version
