@@ -22,7 +22,7 @@ def get_service_sacc():
 def run():
     service = get_service_sacc()
     sheet = service.spreadsheets()
-    sheet_id = "1e0bpWDgAfkOJkR-vnLiSl7kJyG2Pshn7lPftxz_G_AY"
+    sheet_id = creds.sheet_id
     resp_enemies = sheet.values().get(spreadsheetId=sheet_id,range="Enemies!A2:P35").execute()
     resp_items = sheet.values().get(spreadsheetId=sheet_id,range="Items!A2:P35").execute()
     resp_weapons = sheet.values().get(spreadsheetId=sheet_id,range="Weapons!A2:P35").execute()

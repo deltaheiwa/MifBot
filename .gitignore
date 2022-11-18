@@ -5,3 +5,8 @@ __pycache__/
 ffmpeg.exe
 TODO
 *.log
+fixes.txt
+*.db
+databases.zip
+patches.txt
+output
