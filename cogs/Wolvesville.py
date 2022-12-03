@@ -307,10 +307,14 @@ class Wolvesville(commands.Cog):
                         if clan_desc_oneline != "":
                             break
                         clan_desc_oneline = clan_desc_arr[i]
+                    if clan_desc_oneline == "":
+                        clan_desc_oneline = "*No description*"
                     # // logger.debug(clan_desc_oneline)
                     # // clan_desc.encode(encoding="utf8").decode()
-                    c_tag = re.sub('u([0-9a-f]{4})',lambda m: chr(int(m.group(1),16)),clan['tag'])
-                    c_tag = surrogates.decode(c_tag)
+                    if 'tag' in clan:
+                        c_tag = re.sub('u([0-9a-f]{4})',lambda m: chr(int(m.group(1),16)),clan['tag'])
+                        c_tag = surrogates.decode(c_tag)
+                    else: c_tag = ""
                     clan_name = re.sub('u([0-9a-f]{4})',lambda m: chr(int(m.group(1),16)),clan['name'])
                     clan_name = surrogates.decode(clan_name)
                     choose_embed.add_field(name=f"**{clan_dict.index(clan)+1}** `{c_tag}` | **{clan_name}** :flag_{clan['language'].lower()}:", value=clan_desc_oneline)
