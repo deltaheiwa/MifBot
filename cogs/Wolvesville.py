@@ -475,8 +475,8 @@ class Wolvesville(commands.Cog):
                 player_dict, bio_first = player_dict[0], player_dict[1]
             if (datetimefix.utcnow() - datetimefix.strptime(player_dict['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ")).days > 30: 
                 history_caching(player_dict)
-                player_dict = await wov_api_call(username)
-                bio_first = player_dict['personal_message']
+                player_dict = await wov_api_call(player_dict['id'], by_id=True)
+                bio_first = player_dict['personalMessage']
                 json_caching("user", player_dict)
             print(player_dict)
             if local_checks(ctx.message.author):

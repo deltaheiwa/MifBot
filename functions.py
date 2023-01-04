@@ -272,22 +272,23 @@ async def wov_api_call(name_id: str, req_info = "user", by_id = False):
     if by_id is False:
         match req_info:
             case "user":
-                response = requests.get(url = api_url+f"/players/search?username={name_id}", headers=headers)
+                response = requests.get(url = api_url+f"players/search?username={name_id}", headers=headers)
             case "clan":
-                response = requests.get(url = api_url+f"/clans/search?name={name_id}", headers=headers)
+                response = requests.get(url = api_url+f"clans/search?name={name_id}", headers=headers)
             case "shop":
-                response = requests.get(url = api_url+f"/shop/activeOffers", headers=headers)
+                response = requests.get(url = api_url+f"shop/activeOffers", headers=headers)
             case _: raise AttributeError(f"Invalid request type: {req_info}")
     else:
         match req_info:
             case "user":
-                response = requests.get(url = api_url+f"/players/{name_id}", headers=headers)
+                response = requests.get(url = api_url+f"players/{name_id}", headers=headers)
             case "clan":
-                response = requests.get(url = api_url+f"/clans/{name_id}/info", headers=headers)
+                response = requests.get(url = api_url+f"clans/{name_id}/info", headers=headers)
             case "clan_members":
-                response = requests.get(url = api_url+f"/clans/{name_id}/members", headers=headers)
+                response = requests.get(url = api_url+f"clans/{name_id}/members", headers=headers)
             case _: raise AttributeError(f"Invalid request type: {req_info}")
     if response.status_code == 404:
+        logger.error(f"ERROR 404")
         return None
     return response.json()
 
