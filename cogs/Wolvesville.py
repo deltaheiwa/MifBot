@@ -468,7 +468,9 @@ class Wolvesville(commands.Cog):
                     embedErr = discord.Embed(title="Error", description="Couldn't find any user with that username. *Maybe they changed it?*", color=config.CustomColors.red)
                     await ctx.send(embed=embedErr)
                     return None
-                bio_first = player_dict['personalMessage']
+                if 'personalMessage' in player_dict:
+                    bio_first = player_dict['personalMessage']
+                else: bio_first = '*No personal message found*'
                 json_caching("user", player_dict)
             else:
                 player_dict = get_json("un:"+username, table="wov_players", raw=False)
