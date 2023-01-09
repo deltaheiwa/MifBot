@@ -479,8 +479,8 @@ async def nsfw(ctx):
 
 @bot.hybrid_command(name="channel-access",with_app_command=True, description="Changes channel permissions for specified user")
 @commands.has_guild_permissions(manage_permissions=True)
-@app_commands.choices(add_remove=[app_commands.Choice(name="Add", value="Adds permissions to the channel"), app_commands.Choice(name="Remove", value="Removes permissions from the channel")])
-async def channelaccess(ctx: commands.Context, add_remove, channel: discord.TextChannel, *, member: typing.Union[discord.Member, discord.Role] = None, member2: typing.Union[discord.Member, discord.Role] = None, member3: typing.Union[discord.Member, discord.Role] = None):
+@app_commands.choices(add_remove=[app_commands.Choice(name="Add", value="Adds permissions to the channel"), app_commands.Choice(name="Remove", value="Removes permissions from the channel"), app_commands.Choice(name="Default", value="Clears user-specific permissions for the channel")])
+async def channelaccess(ctx: commands.Context, add_remove, channel: discord.TextChannel, member: typing.Union[discord.Member, discord.Role], *, member2: typing.Union[discord.Member, discord.Role] = None, member3: typing.Union[discord.Member, discord.Role] = None):
     await ctx.defer(ephemeral=True)
     perms_change = True
     if member is None:
@@ -488,6 +488,8 @@ async def channelaccess(ctx: commands.Context, add_remove, channel: discord.Text
         return
     if add_remove == "Removes permissions from the channel" or add_remove.lower() == "remove":
         perms_change = False
+    elif add_remove == "Clears user-specific permissions for the channel" or add_remove.lower() in ["default", "def"]:
+        perms_change = None
     
     if type(channel) == discord.TextChannel:
         try:
