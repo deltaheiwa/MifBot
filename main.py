@@ -335,7 +335,6 @@ async def update(ctx):
             await ctx.send(e)
 
 @commands.cooldown(1, 60, commands.BucketType.user)
-@commands.has_guild_permissions(administrator=True)
 @bot.command()
 async def sync(ctx):
     if ctx.message.author.id in config.admin_account_ids:
@@ -516,32 +515,19 @@ async def patchnotes(ctx):
     )
     embed.add_field(
         name="New!",
-        value='''  · Stats on bot's usage. Amount of wins in different games, etc.
-             · Secret stat...
-             · A classic "Bulls and Cows" trial-and-error game, you can play alone or with your friends!
-             · Over 1000 new words for hangman (why did I do that :sob:)
-             · Bot's currency - coins! 
-             · Blackjack game, where you can win (or lose) bot's currency
-             · Dailies! Another way to waste 5 seconds of your life, and collect some coins
-             · Wolvesville commands. You may request information about players and clans, with some extra features
-             · Channel managing with `.channel-access`. Adds or removes users from the channel
+            value='''  · **Default** option for `.channel-access` command. Resets permissions to "role-default" for channel
         ''',
         inline=False
     )
     embed.add_field(
         name="Minor fixes",
-        value=''' · Slight improvement of number guessing game
-             · Fixed two critical bugs in `.lichessplayer`, which broke the command
-             · Improved help command. Now sorted, and has more information about commands
-             · Account registration and login is now way cleaner
-             · Fixed `.wovplayer` not working correctly. It now has case-sensitive search
-             · Fixed `.wallet` showing '*Approximate value*' incorrectly in some cases
-             · Fixed critical bug in `.nsfw` command. It's working again
+        value=''' · Fixed `.wov-player` and `.wov-clan` commands which were broken with the API update
+             · Some of the stats were broken...
         '''
     )
     embed.add_field(
         name="Coming soon...",
-        value=''' · A chess game streaming in real time, and pgn viewer command
+        value=''' · A chess pgn viewer command
              · Wolvesville clan management commands
              · Replays of "Bulls and Cows" games you played 
         '''

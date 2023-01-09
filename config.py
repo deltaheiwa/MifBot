@@ -2,7 +2,7 @@ import discord
 from pathlib import Path
 from datetime import datetime as datetimefix
 
-version = "0.2.3"
+version = "0.2.3.1"
 admin_account_ids = [884407684693110795, 835883093662761000]
 bot_ids = [925520778408103977, 873133022973665290]
 testing_guild_id = 925749115252523069
