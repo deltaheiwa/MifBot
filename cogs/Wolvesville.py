@@ -110,7 +110,7 @@ class WovPlayer(discord.ui.View):
     
     @discord.ui.button(label="SP graph", style=discord.ButtonStyle.blurple)
     async def sp_graph(self, interaction: discord.Interaction, button: discord.ui.Button):
-        with open(Path('Wov Cache', 'old_player_cache.json'), "r") as f:
+        with open(Path('wovcache', 'old_player_cache.json'), "r") as f:
             old_player_cache = json.load(f)
         if self.json_data['id'] not in old_player_cache or len(old_player_cache[self.json_data['id']]) < 3:
             button.disabled = True
@@ -363,7 +363,7 @@ class Wolvesville(commands.Cog):
         else:
             logger.info(f"Found \"{logger_clan_name}\" in cache. Retrieving.")
             clan_dict = get_json("un:"+clan_name, table="wov_clans", raw=False)
-            dict_clan, description = clan_dict[0], clan_dict[1]
+            dict_clan, description = clan_dict[0], clan_dict[1] # Bugged!!!
         
         print(dict_clan)
         def embed_creation(dict_clan, description):

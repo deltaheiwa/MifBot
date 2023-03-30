@@ -46,7 +46,7 @@ class Secret(commands.Cog):
         # stat_dict = json.loads(stat['bot_stats'])
         # await ctx.send("omg", view=Buttons())
         # print("lala")
-        # with open("Wov Cache/profileIcons.json", "r") as f:
+        # with open("wovcache/profileIcons.json", "r") as f:
         #     icons_dict = json.load(f)
         # icons_name = []
         # for ico in icons_dict:
@@ -54,7 +54,7 @@ class Secret(commands.Cog):
         # print(icons_name)
         # ! Alert! Code below might take a long time to finish
         
-        # with open(Path('Wov Cache', 'personal_messages_wov.json'), "r") as js_f:
+        # with open(Path('wovcache', 'personal_messages_wov.json'), "r") as js_f:
         #     pm_file = json.load(js_f)
         # for id in pm_file:
         #     temp_personal(id, pm_file[id]['personalMessage'])

@@ -434,14 +434,14 @@ def json_caching(cache_type, json_data, extra_data=None):
         print(traceback.format_exc())
 
 def history_caching(json_data):
-    with open(Path('Wov Cache', 'old_player_cache.json'), "r") as js_f:
+    with open(Path('wovcache', 'old_player_cache.json'), "r") as js_f:
         cache_file = json.load(js_f)
     
     if json_data['id'] not in cache_file:
         cache_file[json_data['id']] = {}
     cache_file[json_data['id']][json_data['caching_data']['time_cached']] = json_data
 
-    with open(Path('Wov Cache', 'old_player_cache.json'), "w") as js_f:
+    with open(Path('wovcache', 'old_player_cache.json'), "w") as js_f:
         json.dump(cache_file, js_f, indent=4)
 
 def level_rank(level):
