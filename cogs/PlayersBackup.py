@@ -3,8 +3,9 @@ import random
 import asyncio
 import json
 import asyncpg
+import shutil
 from discord.ext import commands, tasks
-from functions import *
+from util.bot_functions import *
 
 class PlayersBackup(commands.Cog):
     def __init__(self, bot):
@@ -25,10 +26,11 @@ class PlayersBackup(commands.Cog):
     async def upload_json_to_discord(self):
         channel_to_upload_to = self.bot.get_channel(928035142482681886)
         try:
-            await channel_to_upload_to.send(file=discord.File("local.db"))
+            shutil.make_archive("databases", 'zip', 'db_data/databases/')
+            await channel_to_upload_to.send(file=discord.File("databases.zip"))
             print("Database file upload success")
         except Exception as e:
-            print(f"Upload JSON failed: {e}")
+            print(f"Upload .zip package failed: {e}")
     
     @upload_json_to_discord.before_loop
     async def before_uploading(self):

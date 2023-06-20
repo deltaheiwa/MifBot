@@ -1,0 +1,1814 @@
+# Translations template for PROJECT.
+# Copyright (C) 2023 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2023-06-18 15:03+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: main.py:166
+msgid "Server prefix changed to: {prefix}"
+msgstr ""
+
+#: main.py:172
+msgid "Error, user missing permissions"
+msgstr ""
+
+#: main.py:173
+msgid ""
+":x: Only `Administrator` or user with `Manage Server` permissions can "
+"change the prefix"
+msgstr ""
+
+#: main.py:189
+msgid "User's avatar"
+msgstr ""
+
+#: main.py:213
+msgid "Info about user"
+msgstr ""
+
+#: main.py:214
+msgid "Here is the info I retrieved about {user}"
+msgstr ""
+
+#: cogs/AccountSystem.py:65 cogs/AccountSystem.py:131 cogs/AccountSystem.py:201
+#: cogs/AccountSystem.py:282 cogs/Chess.py:1179 main.py:222
+msgid "Username"
+msgstr ""
+
+#: cogs/AccountSystem.py:137 main.py:223
+msgid "Nickname"
+msgstr ""
+
+#: cogs/Wolvesville.py:578 main.py:225
+msgid "Status"
+msgstr ""
+
+#: main.py:225
+msgid "*Couldn't retrieve status*"
+msgstr ""
+
+#: main.py:226
+msgid "Top role"
+msgstr ""
+
+#: main.py:226
+msgid "*Couldn't retrieve highest role*"
+msgstr ""
+
+#: main.py:228
+msgid "Created"
+msgstr ""
+
+#: main.py:229
+msgid "Joined"
+msgstr ""
+
+#: main.py:229
+msgid "*Is not in the server*"
+msgstr ""
+
+#: main.py:303
+msgid "Preferences"
+msgstr ""
+
+#: main.py:304
+msgid "Custom prefix"
+msgstr ""
+
+#: main.py:304
+msgid ""
+"*There is no custom prefix set. The default is either `.` or server-"
+"specific.*"
+msgstr ""
+
+#: cogs/Wolvesville.py:413 main.py:305
+msgid "Language"
+msgstr ""
+
+#: main.py:319
+msgid "You already ponged yourself. Meow"
+msgstr ""
+
+#: main.py:322
+msgid "Pong {}ms"
+msgstr ""
+
+#: main.py:334
+msgid "You are in my DMS. I can't call you!'"
+msgstr ""
+
+#: main.py:361
+msgid "Join a voice chat and I will stream for you, senpaii-"
+msgstr ""
+
+#: main.py:369
+msgid "Ugh, where are you?"
+msgstr ""
+
+#: main.py:369
+msgid "I couldn't detect a voice channel to connect. Meow."
+msgstr ""
+
+#: main.py:378
+msgid "Redirecting..."
+msgstr ""
+
+#: main.py:401
+msgid "Please specify if you want to add/remove or set default permissions"
+msgstr ""
+
+#: main.py:404
+msgid "User not specified"
+msgstr ""
+
+#: main.py:414
+msgid "Updated permissions for {}"
+msgstr ""
+
+#: main.py:416
+msgid "Access error"
+msgstr ""
+
+#: main.py:416
+msgid "I have no access to {}"
+msgstr ""
+
+#: main.py:419
+msgid "Channel error"
+msgstr ""
+
+#: main.py:419
+msgid "Channel is unidentified, or channel type is not supported"
+msgstr ""
+
+#: main.py:431
+msgid "Patch notes"
+msgstr ""
+
+#: main.py:432
+msgid "for **{}**"
+msgstr ""
+
+#: main.py:474
+msgid "Select a section..."
+msgstr ""
+
+#: main.py:483 main.py:549
+msgid "version {}"
+msgstr ""
+
+#: main.py:505
+msgid "Administrative commands"
+msgstr ""
+
+#: main.py:506
+msgid ""
+"Changes prefix to desirable one. You would need at least 'Manage server' "
+"permission to change it. \n"
+"Example: `.changeprefix -`"
+msgstr ""
+
+#: main.py:507
+msgid ""
+"Add or remove access to the channel for specified users. You would need "
+"at least 'Manage permissions' permission to use it. \n"
+"Example: `.channel-access Add #my-channel @someonecute`"
+msgstr ""
+
+#: main.py:509
+msgid "Informative commands"
+msgstr ""
+
+#: main.py:510
+msgid ""
+"Retrieves info about mentioned user (If user is not specified, then about"
+" the author). Button can be used to toggle between 'User info' and "
+"'Avatar'. \n"
+"Example: `.userinfo @someonecute`"
+msgstr ""
+
+#: main.py:511
+msgid ""
+"Pongs you back. Meow.\n"
+"You may want to test if the bot is alive or not with it."
+msgstr ""
+
+#: main.py:512
+msgid "Check out what's changed with the latest update!"
+msgstr ""
+
+#: main.py:513
+msgid ""
+"Shows statistics on bot usage (wins/losses, amount of commands used, "
+"etc). Requires an account. \n"
+"Aliases: bstats"
+msgstr ""
+
+#: main.py:515
+msgid "Fun and games"
+msgstr ""
+
+#: main.py:516
+msgid ""
+"You have to be 18+ to use this command. Will stream a random 18+ video "
+"for you from ||`xvideos`||"
+msgstr ""
+
+#: main.py:517
+msgid ""
+"(Maybe) fun number guessing game. It has three difficulties: easy, "
+"medium, hard. Hardmode changes number every 20 guesses. \n"
+"Aliases: ng, ngstart"
+msgstr ""
+
+#: main.py:518
+msgid ""
+"Word guessing game. You have 6 tries until you hang a man. Over than 1000"
+" words stored. Contact `{}` if you want to suggest new words. \n"
+"Aliases: hgm, hangm"
+msgstr ""
+
+#: main.py:519
+msgid ""
+"A classic blackjack game. Requires an account, as you can bet on bot's "
+"currency. \n"
+"Example: `.blackjack 100` \n"
+"Aliases: bj"
+msgstr ""
+
+#: main.py:520
+msgid ""
+"Both single-player and multiplayer games, 'bagels' and 'classic'. "
+"'Bagels' has four types of difficulty - classic, fast, hard, and long. "
+"You can find more information by starting the game itself. All of the "
+"won, lost, and abandoned games are counted toward your stats if you have "
+"an account. \n"
+"Example: `.bulls bagels classic` \n"
+"Aliases: [`bulls`] [`pfb`->bagels] [`blitz`->fast | `nerd`->long]"
+msgstr ""
+
+#: main.py:522
+msgid "Chess commands"
+msgstr ""
+
+#: main.py:523
+msgid ""
+"Shows a list of top 10 players in specified variant of chess. For "
+"example: `.lichesstop10 rapid`. \n"
+"Aliases: li-top10, litop"
+msgstr ""
+
+#: main.py:524
+msgid ""
+"Shows stats of a certain lichess player. This command also accepts "
+"variants of chess as second argument to receive detailed stats of certain"
+" player for that variant. \n"
+"Example: `.lichessplayer {username} rapid`. \n"
+"Aliases: liplayer, li-player, li-p"
+msgstr ""
+
+#: main.py:526
+msgid "Wolvesville commands"
+msgstr ""
+
+#: main.py:527
+msgid ""
+"Shows all the stats gathered from a Wolvesville account. Use an "
+"additional argument - `avatars`, to render all the avatars of a specific "
+"user. It can also be used to render a 'skill points' graph. \n"
+"Example: `.wovplayer {username}` \n"
+"Aliases: wov-player, w-player, wov-p, wovp, w-p"
+msgstr ""
+
+#: main.py:528
+msgid ""
+"Shows all the stats gathered about Wolvesville clan: description, date "
+"created, members, etc. \n"
+"Example: `.wovclan {clan name}` \n"
+"Aliases: wov-clan, w-clan, wov-c, wovc, w-c"
+msgstr ""
+
+#: main.py:530
+msgid "Account commands"
+msgstr ""
+
+#: main.py:531
+msgid ""
+"Use this command to start a registration process. You need an account to "
+"access locked bot's features"
+msgstr ""
+
+#: main.py:532
+msgid ""
+"Use this command to log into your account or someone else's existing "
+"account (You will probably need their confirmation to transfer "
+"ownership)."
+msgstr ""
+
+#: main.py:533
+msgid ""
+"Use this command to log out of your account, if you are logged in. Might "
+"be helpful."
+msgstr ""
+
+#: main.py:534
+msgid ""
+"Use this command to change your nickname (don't confuse it with "
+"username!). Example: `.nickname My New Nickname`"
+msgstr ""
+
+#: main.py:535
+msgid "Shows the amount of coins you have."
+msgstr ""
+
+#: main.py:536
+msgid "Collect coins daily!"
+msgstr ""
+
+#: main.py:541
+msgid "Help Command"
+msgstr ""
+
+#: main.py:542
+msgid "All available commands. Meow"
+msgstr ""
+
+#: main.py:546
+msgid "Sections"
+msgstr ""
+
+#: main.py:546
+msgid "*Use select menu*"
+msgstr ""
+
+#: cogs/AccountSystem.py:36
+msgid "Confirm"
+msgstr ""
+
+#: cogs/AccountSystem.py:46 cogs/AccountSystem.py:51 cogs/AccountSystem.py:146
+#: cogs/AccountSystem.py:151 cogs/AccountSystem.py:155
+#: cogs/AccountSystem.py:159 cogs/AccountSystem.py:213
+#: cogs/AccountSystem.py:227 cogs/AccountSystem.py:233 cogs/Chess.py:1078
+#: cogs/SmallGames.py:290 cogs/SmallGames.py:361 cogs/Wolvesville.py:308
+#: cogs/Wolvesville.py:323 cogs/Wolvesville.py:478 cogs/Wolvesville.py:482
+#: cogs/Wolvesville.py:493
+msgid "Error"
+msgstr ""
+
+#: cogs/AccountSystem.py:46
+msgid "**{username}** is not the right username."
+msgstr ""
+
+#: cogs/AccountSystem.py:51
+msgid "**{password}** is wrong password."
+msgstr ""
+
+#: cogs/AccountSystem.py:57
+msgid "Account deleted"
+msgstr ""
+
+#: cogs/AccountSystem.py:58
+msgid ""
+"You successfully deleted your previous account. Now you can register a "
+"new one."
+msgstr ""
+
+#: cogs/AccountSystem.py:65
+msgid "Input your previous username"
+msgstr ""
+
+#: cogs/AccountSystem.py:67 cogs/AccountSystem.py:133 cogs/AccountSystem.py:203
+#: cogs/AccountSystem.py:284
+msgid "Password"
+msgstr ""
+
+#: cogs/AccountSystem.py:67
+msgid "Input your previous password"
+msgstr ""
+
+#: cogs/AccountSystem.py:83 cogs/AccountSystem.py:342 cogs/AccountSystem.py:365
+msgid "Warning!"
+msgstr ""
+
+#: cogs/AccountSystem.py:84
+msgid ""
+"If you will register a new account, you will lose your previous account!"
+" \n"
+"Please input login and password of your previous account to proceed, or "
+"press **Cancel** button."
+msgstr ""
+
+#: cogs/AccountSystem.py:92 cogs/AccountSystem.py:188 cogs/AccountSystem.py:304
+msgid "Canceled"
+msgstr ""
+
+#: cogs/AccountSystem.py:92
+msgid ""
+"You canceled registration. If you want to login into your previous "
+"account, use `login` command"
+msgstr ""
+
+#: cogs/AccountSystem.py:110
+msgid "You declined"
+msgstr ""
+
+#: cogs/AccountSystem.py:110
+msgid "If you want to login into your account, simply use `login` command"
+msgstr ""
+
+#: cogs/AccountSystem.py:125
+msgid "Registration Form"
+msgstr ""
+
+#: cogs/AccountSystem.py:131 cogs/AccountSystem.py:201
+#: cogs/AccountSystem.py:282
+msgid "No special characters are allowed"
+msgstr ""
+
+#: cogs/AccountSystem.py:133 cogs/AccountSystem.py:203
+#: cogs/AccountSystem.py:284
+msgid "Shouldn't be shorter than 4 characters"
+msgstr ""
+
+#: cogs/AccountSystem.py:135
+msgid "Confirm Password"
+msgstr ""
+
+#: cogs/AccountSystem.py:135
+msgid "Repeat your password"
+msgstr ""
+
+#: cogs/AccountSystem.py:137
+msgid "If empty, will be equal to your login"
+msgstr ""
+
+#: cogs/AccountSystem.py:147
+msgid ""
+"`{username}` contains a special character.\n"
+"Use a different username"
+msgstr ""
+
+#: cogs/AccountSystem.py:151
+msgid ""
+"Sorry! An account with this username already exists.\n"
+"Input a different username"
+msgstr ""
+
+#: cogs/AccountSystem.py:155
+msgid "Passwords {password} and {confirm_password} don't match!"
+msgstr ""
+
+#: cogs/AccountSystem.py:160
+msgid ""
+"`{nickname}` contains a special character.\n"
+"Use a different nickname"
+msgstr ""
+
+#: cogs/AccountSystem.py:170
+msgid "Congrats"
+msgstr ""
+
+#: cogs/AccountSystem.py:170
+msgid "You completed the registration"
+msgstr ""
+
+#: cogs/AccountSystem.py:188
+msgid "Registration canceled due to timeout"
+msgstr ""
+
+#: cogs/AccountSystem.py:210
+msgid ""
+"Owner of the account accepted the transfer. You are now owner of this "
+"account :white_check_mark:"
+msgstr ""
+
+#: cogs/AccountSystem.py:211
+msgid ""
+"You successfully transferred account to {transferred_to} "
+":white_check_mark:\n"
+"You can create a new account now"
+msgstr ""
+
+#: cogs/AccountSystem.py:213
+msgid "Sorry! Wrong username or password"
+msgstr ""
+
+#: cogs/AccountSystem.py:219
+msgid "Login Form"
+msgstr ""
+
+#: cogs/AccountSystem.py:228
+msgid ""
+"`{username}` contains a special character.\n"
+"This username is not allowed"
+msgstr ""
+
+#: cogs/AccountSystem.py:233
+msgid "I couldn't find this username in my database. Maybe you misspelled it?"
+msgstr ""
+
+#: cogs/AccountSystem.py:241
+msgid "Wrong password"
+msgstr ""
+
+#: cogs/AccountSystem.py:241
+msgid "Password doesn't match"
+msgstr ""
+
+#: cogs/AccountSystem.py:249
+msgid "Transfer confirmation"
+msgstr ""
+
+#: cogs/AccountSystem.py:249
+msgid ""
+"Someone else tried to log into account owned by you! Fill the form to "
+"confirm the transfer"
+msgstr ""
+
+#: cogs/AccountSystem.py:250
+msgid "Accept"
+msgstr ""
+
+#: cogs/AccountSystem.py:251
+msgid "Decline"
+msgstr ""
+
+#: cogs/AccountSystem.py:256
+msgid "Declined"
+msgstr ""
+
+#: cogs/AccountSystem.py:256
+msgid ""
+"You declined the transfer. If you want to login into your account, use "
+"`login` command"
+msgstr ""
+
+#: cogs/AccountSystem.py:258 cogs/AccountSystem.py:266
+msgid ""
+"Owner of the account declined the transfer. You can register or log into "
+"your account"
+msgstr ""
+
+#: cogs/AccountSystem.py:275
+msgid ""
+"Owner of this account has `Account transfer confirmation` enabled, and in"
+" order for you to get ownership they have to confirm transfer within 10 "
+"minutes. Also if you have an account already, you will lose it!"
+msgstr ""
+
+#: cogs/AccountSystem.py:278
+msgid "Successfully logged in :white_check_mark:"
+msgstr ""
+
+#: cogs/AccountSystem.py:304
+msgid "Login canceled due to timeout"
+msgstr ""
+
+#: cogs/AccountSystem.py:322 cogs/AccountSystem.py:357
+#: cogs/AccountSystem.py:386
+msgid "Check your DMS :grey_exclamation:"
+msgstr ""
+
+#: cogs/AccountSystem.py:328 cogs/AccountSystem.py:360
+msgid "You are already logged in!"
+msgstr ""
+
+#: cogs/AccountSystem.py:333
+msgid "Be careful!"
+msgstr ""
+
+#: cogs/AccountSystem.py:334
+msgid ""
+"You already have an account `{login}` registered on this discord account!"
+" If you register a new account, you will probably lose progress on a "
+"previous one.\n"
+"Are you sure you want to continue?"
+msgstr ""
+
+#: cogs/AccountSystem.py:343
+msgid ""
+"Never use your real discord credentials (email, password, etc.)!\n"
+"This registration is only to access bot's features and store some extra "
+"stats"
+msgstr ""
+
+#: cogs/AccountSystem.py:345
+msgid "Special Characters"
+msgstr ""
+
+#: cogs/AccountSystem.py:345
+msgid "Please, do not use any special characters"
+msgstr ""
+
+#: cogs/AccountSystem.py:366
+msgid ""
+"I couldn't detect any account connected to your discord account. If you "
+"want to create a new account, use `register` command. \n"
+"Although you can log into existing account, but remember to confirm the "
+"account transfer"
+msgstr ""
+
+#: cogs/AccountSystem.py:372
+msgid "Reminder"
+msgstr ""
+
+#: cogs/AccountSystem.py:373
+msgid ""
+"If you are trying to login into account which is already connected to "
+"another account, you would probably need to confirm the transfer"
+msgstr ""
+
+#: cogs/AccountSystem.py:388
+msgid ""
+"You don't have any account owned. Use `register` command to create a new "
+"account"
+msgstr ""
+
+#: cogs/AccountSystem.py:391
+msgid "You are not logged into any account"
+msgstr ""
+
+#: cogs/AccountSystem.py:394
+msgid "You successfully logged out!"
+msgstr ""
+
+#: cogs/AccountSystem.py:404 cogs/Stats.py:28
+msgid ""
+"You don't have an account yet. You can register by using command "
+"`register`"
+msgstr ""
+
+#: cogs/AccountSystem.py:407
+msgid "Sorry but I see no nickname. Example: `.nickname My New Nickname`"
+msgstr ""
+
+#: cogs/AccountSystem.py:410
+msgid "Nickname was successfully changed :white_check_mark:"
+msgstr ""
+
+#: cogs/AccountSystem.py:431 cogs/AccountSystem.py:441
+msgid "You are not registered or not logged in!"
+msgstr ""
+
+#: cogs/AccountSystem.py:455
+msgid "Already collected"
+msgstr ""
+
+#: cogs/AccountSystem.py:455
+msgid ""
+"You may collect another daily in **{}**.\n"
+"Your daily streak is: **{} days**"
+msgstr ""
+
+#: cogs/AccountSystem.py:464
+msgid "Daily streak lost"
+msgstr ""
+
+#: cogs/AccountSystem.py:464
+msgid "You lost your streak of **{}** :("
+msgstr ""
+
+#: cogs/AccountSystem.py:465 cogs/AccountSystem.py:475
+msgid "You gained"
+msgstr ""
+
+#: cogs/AccountSystem.py:474
+msgid "Daily collected"
+msgstr ""
+
+#: cogs/AccountSystem.py:474
+msgid "You are on **{}** daily streak!"
+msgstr ""
+
+#: cogs/AccountSystem.py:475
+msgid "{} {}"
+msgstr ""
+
+#: cogs/Chess.py:74
+msgid "Next Game"
+msgstr ""
+
+#: cogs/Chess.py:246
+msgid "Unlimited"
+msgstr ""
+
+#: cogs/Chess.py:272
+msgid ""
+"Result: **{win_cond} {etc}**\n"
+"Opening: {opening}\n"
+"Moves: **{moves}**\n"
+"Played on: {date} \n"
+"Game took {time}"
+msgstr ""
+
+#: cogs/Chess.py:282
+msgid " moves"
+msgstr ""
+
+#: cogs/Chess.py:284
+msgid " move"
+msgstr ""
+
+#: cogs/Chess.py:290
+msgid "Game information"
+msgstr ""
+
+#: cogs/Chess.py:305
+msgid "inaccuracy"
+msgstr ""
+
+#: cogs/Chess.py:310
+msgid "inaccuracies"
+msgstr ""
+
+#: cogs/Chess.py:315
+msgid "mistake"
+msgstr ""
+
+#: cogs/Chess.py:320
+msgid "mistakes"
+msgstr ""
+
+#: cogs/Chess.py:325
+msgid "blunder"
+msgstr ""
+
+#: cogs/Chess.py:330
+msgid "blunders"
+msgstr ""
+
+#: cogs/Chess.py:338
+msgid "Game analysis"
+msgstr ""
+
+#: cogs/Chess.py:339
+msgid ""
+"No analysis available\n"
+"||*Please visit game on lichess and request analysis by yourself*||"
+msgstr ""
+
+#: cogs/Chess.py:406 cogs/Chess.py:441
+msgid "Clocks"
+msgstr ""
+
+#: cogs/Chess.py:416 cogs/Chess.py:454 cogs/Chess.py:472 cogs/Chess.py:481
+msgid "Move Comment"
+msgstr ""
+
+#: cogs/Chess.py:417 cogs/Chess.py:482
+msgid "*No comment*"
+msgstr ""
+
+#: cogs/Chess.py:421 cogs/Chess.py:462 cogs/Chess.py:488
+msgid "Evaluation"
+msgstr ""
+
+#: cogs/Chess.py:422
+msgid "**+0.2** - *Starting position*"
+msgstr ""
+
+#: cogs/Chess.py:422
+msgid "*No evaluation*"
+msgstr ""
+
+#: cogs/Chess.py:456 cogs/Chess.py:465
+msgid "Game over."
+msgstr ""
+
+#: cogs/Chess.py:1054
+msgid "Lichess leaderboard - Rapid"
+msgstr ""
+
+#: cogs/Chess.py:1055
+msgid "*as for {}*"
+msgstr ""
+
+#: cogs/Chess.py:1064
+msgid "with rating"
+msgstr ""
+
+#: cogs/Chess.py:1069
+msgid "Requested by {}"
+msgstr ""
+
+#: cogs/Chess.py:1079
+msgid "Something went wrong"
+msgstr ""
+
+#: cogs/Chess.py:1103
+msgid "Please input a lichess username"
+msgstr ""
+
+#: cogs/Chess.py:1171
+msgid "Everything I could find about {} on lichess"
+msgstr ""
+
+#: cogs/Chess.py:1181 cogs/Chess.py:1185
+msgid "*No bio*"
+msgstr ""
+
+#: cogs/Chess.py:1187
+msgid "Full name"
+msgstr ""
+
+#: cogs/Chess.py:1201
+msgid "Flag"
+msgstr ""
+
+#: cogs/Chess.py:1204
+msgid "FIDE rating"
+msgstr ""
+
+#: cogs/Chess.py:1207
+msgid "Bio"
+msgstr ""
+
+#: cogs/Chess.py:1212
+msgid "Last active"
+msgstr ""
+
+#: cogs/Chess.py:1215
+msgid "Created at"
+msgstr ""
+
+#: cogs/Chess.py:1219
+msgid "Total playtime"
+msgstr ""
+
+#: cogs/Chess.py:1236 cogs/Wolvesville.py:679
+msgid "General stats"
+msgstr ""
+
+#: cogs/Chess.py:1253 cogs/Chess.py:1362 cogs/Chess.py:1447
+msgid "Rating"
+msgstr ""
+
+#: cogs/Chess.py:1275
+msgid "Links"
+msgstr ""
+
+#: cogs/Chess.py:1281 cogs/Chess.py:1313 cogs/Chess.py:1329
+msgid "Couldn't find any user with that username"
+msgstr ""
+
+#: cogs/Chess.py:1300
+msgid "Variant/Time control not recognized"
+msgstr ""
+
+#: cogs/Chess.py:1301
+msgid "Valid modes are: `{}`"
+msgstr ""
+
+#: cogs/Chess.py:1359 cogs/Chess.py:1377
+msgid "Games"
+msgstr ""
+
+#: cogs/Chess.py:1359
+msgid "*No games played*"
+msgstr ""
+
+#: cogs/Chess.py:1363
+msgid ""
+"Current rating: **{current_rating}?**\n"
+"Deviation: **{deviation}** ||(Zero games played)||"
+msgstr ""
+
+#: cogs/Chess.py:1378
+#, python-format
+msgid ""
+"Total: **{total}**\n"
+"Rated: **{rated} ({rated_percent}%)**\n"
+"Wins: **{win} ({win_percent}%)**\n"
+"Losses: **{loss} ({loss_percent}%)**\n"
+"Draws: **{draw} ({draw_percent}%)**\n"
+"Tournament: **{tournament} ({tournament_percent}%)**\n"
+"Berserk: **{berserk} ({berserk_tournament_percent}%)**\n"
+"Disconnects: **{disconnect} ({disconnect_percent}%)**\n"
+"Average opponent's ELO: **~{average_elo}**\n"
+"Total playtime: **{total_playtime}**\n"
+"Rank: **{rank}**\n"
+"**Better than {better_than_percent} of players**"
+msgstr ""
+
+#: cogs/Chess.py:1448
+msgid ""
+"Current rating: **{current_rating}**\n"
+"[Deviation](https://lichess.org/forum/general-chess-discussion/rating-"
+"deviation#2): **{deviation}**\n"
+"Highest rating: **{best_rating}** at **{best_date} {best_link}**\n"
+"Lowest rating: **{worst_rating}** at **{worst_date} {worst_link}**\n"
+"Progress: **{progress}**{arrow}"
+msgstr ""
+
+#: cogs/Chess.py:1495
+msgid ""
+"Current streak: ({win_or_loss}) **{streak} [from]{from_link} {from_date} "
+"[to]{to_link} {to_date}**"
+msgstr ""
+
+#: cogs/Chess.py:1566
+msgid "*No current streak*"
+msgstr ""
+
+#: cogs/Chess.py:1568
+msgid "Current streak"
+msgstr ""
+
+#: cogs/Chess.py:1572
+msgid ""
+"Longest winning streak: **{streak} [from]{from_link} {from_date} "
+"[to]{to_link} {to_date}**"
+msgstr ""
+
+#: cogs/Chess.py:1592
+msgid "Winning streak"
+msgstr ""
+
+#: cogs/Chess.py:1596
+msgid ""
+"Longest losing streak: **{streak} [from]{from_link} {from_date} "
+"[to]{to_link} {to_date}**"
+msgstr ""
+
+#: cogs/Chess.py:1616
+msgid "Losing streak"
+msgstr ""
+
+#: cogs/Chess.py:1622
+msgid "*No best rated wins*"
+msgstr ""
+
+#: cogs/Chess.py:1626 cogs/Chess.py:1653
+msgid ""
+"Against {title} [{opponent}]{op_link} with rating **{op_rating}** "
+"[on]{game_link} {date_played}\n"
+msgstr ""
+
+#: cogs/Chess.py:1641
+msgid "Best rated wins"
+msgstr ""
+
+#: cogs/Chess.py:1647
+msgid "*No worst rated losses*"
+msgstr ""
+
+#: cogs/Chess.py:1668
+msgid "Worst rated losses"
+msgstr ""
+
+#: cogs/Chess.py:1674
+msgid "*No longest play streak*"
+msgstr ""
+
+#: cogs/Chess.py:1676
+msgid ""
+"Longest play streak: **{streak} \n"
+"[from]{from_link} {from_date} \n"
+"[to]{to_link} {to_date}**\n"
+msgstr ""
+
+#: cogs/Chess.py:1707
+msgid "*No current play streak*"
+msgstr ""
+
+#: cogs/Chess.py:1709
+msgid ""
+"Current play streak: **{streak} \n"
+"[from]{from_link} {from_date} \n"
+"[to]{to_link} {to_date}**"
+msgstr ""
+
+#: cogs/Chess.py:1739
+msgid "Play streak"
+msgstr ""
+
+#: cogs/Chess.py:1748
+msgid "Longest streak: **0 seconds**\n"
+msgstr ""
+
+#: cogs/Chess.py:1752
+msgid ""
+"Longest streak: **{streak} \n"
+"[from]{from_link} {from_date} \n"
+"[to]{to_link} {to_date}**\n"
+msgstr ""
+
+#: cogs/Chess.py:1788
+msgid "Current streak: **0 seconds**"
+msgstr ""
+
+#: cogs/Chess.py:1790
+msgid ""
+"Current streak: **{streak} \n"
+"[from]{from_link} {from_date} \n"
+"[to]{to_link} {to_date}**"
+msgstr ""
+
+#: cogs/Chess.py:1822
+msgid "Time spent playing"
+msgstr ""
+
+#: cogs/Chess.py:1861 cogs/Chess.py:1953
+msgid "Please wait, fetching game data..."
+msgstr ""
+
+#: cogs/Chess.py:1894
+msgid "Click on the game id to view the game"
+msgstr ""
+
+#: cogs/Chess.py:1968 cogs/SmallGames.py:1105
+msgid "Game not found"
+msgstr ""
+
+#: cogs/Chess.py:1969
+msgid "Please check the game id and try again"
+msgstr ""
+
+#: cogs/SmallGames.py:59
+msgid "You already joined"
+msgstr ""
+
+#: cogs/SmallGames.py:78
+msgid "Joined!"
+msgstr ""
+
+#: cogs/SmallGames.py:98
+msgid "You didn't join the game to leave it"
+msgstr ""
+
+#: cogs/SmallGames.py:115
+msgid "You left the lobby!"
+msgstr ""
+
+#: cogs/SmallGames.py:129
+msgid "You are not the host!"
+msgstr ""
+
+#: cogs/SmallGames.py:149
+msgid "Bulls and Cows Rules"
+msgstr ""
+
+#: cogs/SmallGames.py:149
+msgid "Rulebook for the game **Bulls and Cows**"
+msgstr ""
+
+#: cogs/SmallGames.py:151 cogs/SmallGames.py:180
+msgid "General rules"
+msgstr ""
+
+#: cogs/SmallGames.py:152
+msgid ""
+"The game is played in turns by two (or more) opponents who aim to "
+"decipher the other's secret code by trial and error"
+msgstr ""
+
+#: cogs/SmallGames.py:155 cogs/SmallGames.py:184
+msgid "Hints"
+msgstr ""
+
+#: cogs/SmallGames.py:156
+msgid ""
+"After each guess, the bot will give you the amount of \"bulls\" and "
+"\"cows\" your guess has, comparing it to the secret number of each "
+"opponent:\n"
+"\n"
+" ·  **Cow** - One of the digits is in the secret number, but in the wrong"
+" place\n"
+"\n"
+" ·  **Bull** - The guess has a correct digit in the correct place\n"
+"\n"
+"\n"
+"For example, your secret number is 7914 and the opponent's guess is 1234,"
+" the clues would be: '1 cow, 1 bull'. The 'cow' is 1 and 'bull' is 4\n"
+"\n"
+"\n"
+"The goal of the game is to be the first to get 4 bulls on every of "
+"opponent's secret numbers"
+msgstr ""
+
+#: cogs/SmallGames.py:164 cogs/SmallGames.py:200
+msgid "Statistics"
+msgstr ""
+
+#: cogs/SmallGames.py:165
+msgid ""
+"If you are registered on the bot network, bot will record your victories "
+"and losses. To access your stats, use command `botstats`"
+msgstr ""
+
+#: cogs/SmallGames.py:178
+msgid "Bagels Rules"
+msgstr ""
+
+#: cogs/SmallGames.py:178
+msgid "Rulebook for the game **Pico, Fermi, Bagels**"
+msgstr ""
+
+#: cogs/SmallGames.py:181
+msgid ""
+"The main goal is to guess the secret number of the amount of digits (with"
+" no repeating digits) depending on the mode, in certain amount of tries"
+msgstr ""
+
+#: cogs/SmallGames.py:185
+msgid ""
+"After each try, bot will give three types of clues:\n"
+" ·  **Pico** - One of the digits is in the secret number, but in the "
+"wrong place\n"
+" ·  **Fermi** - The guess has a correct digit in the correct place\n"
+" ·  **Bagels** - None of the digits is in the secret numbers\n"
+"\n"
+"For example secret number is 273 and the player's guess is 123, the clues"
+" would be: 'Pico Fermi'. The 'Pico' is from the 2 and 'Fermi' is from the"
+" 3"
+msgstr ""
+
+#: cogs/SmallGames.py:192
+msgid "Modes"
+msgstr ""
+
+#: cogs/SmallGames.py:193
+msgid ""
+"There are currently 4 gamemodes for **Bagels**:\n"
+" ·   **Fast mode** - Blitz mode. No major gameplay changes. *You have 7 "
+"tries to guess a 2-digit number*\n"
+" ·   **Classic mode** - No gameplay changes. *You have 10 tries to guess "
+"a 3-digit number*\n"
+" ·   **Hard mode** - In this mode bot will give only one clue for the "
+"guess, for example secret number is 273 and the player's guess is 123, "
+"the clue would be only: 'Pico'. *You have 13 tries to guess a 3-digit "
+"number*\n"
+" ·   **Prolonged mode** - Nerd mode. No major gameplay changes. *You have"
+" 20 tries to guess a 6-digit number*"
+msgstr ""
+
+#: cogs/SmallGames.py:201
+msgid ""
+"If you are registered on the bot network, bot will record your victories,"
+" losses and abandoned games in each game mode. To access your stats, use "
+"command `botstats`"
+msgstr ""
+
+#: cogs/SmallGames.py:260
+msgid "Somehow you are not in game..."
+msgstr ""
+
+#: cogs/SmallGames.py:290
+msgid "{number} is either not a number, or contains repeated digits"
+msgstr ""
+
+#: cogs/SmallGames.py:314
+msgid "It's not your turn!"
+msgstr ""
+
+#: cogs/SmallGames.py:320
+msgid "Your guess...?"
+msgstr ""
+
+#: cogs/SmallGames.py:349
+msgid "**Your guess:** {number}\n"
+msgstr ""
+
+#: cogs/SmallGames.py:361
+msgid "{number} is either not a number, or contains repeated digits. Try again!"
+msgstr ""
+
+#: cogs/SmallGames.py:389
+msgid "Both you and Dealer bust. You both received your coins back"
+msgstr ""
+
+#: cogs/SmallGames.py:394 cogs/SmallGames.py:440
+msgid "Dealer busts. You received {amount} coins"
+msgstr ""
+
+#: cogs/SmallGames.py:400
+msgid "You bust and lost {amount} coins"
+msgstr ""
+
+#: cogs/SmallGames.py:446
+msgid "Dealer has less value than you. You received {amount} coins"
+msgstr ""
+
+#: cogs/SmallGames.py:451
+msgid "You have less value than dealer, and lost {amount} coins"
+msgstr ""
+
+#: cogs/SmallGames.py:455
+msgid "It's a tie. You received your coins back"
+msgstr ""
+
+#: cogs/SmallGames.py:477
+msgid "It's not your game!"
+msgstr ""
+
+#: cogs/SmallGames.py:576
+msgid "Difficulty was changed to `easy`"
+msgstr ""
+
+#: cogs/SmallGames.py:580
+msgid "Game started"
+msgstr ""
+
+#: cogs/SmallGames.py:580
+msgid "Start guessing :3"
+msgstr ""
+
+#: cogs/SmallGames.py:586
+msgid "You have only {guess} guesses left"
+msgstr ""
+
+#: cogs/SmallGames.py:588
+msgid "You ran out of guesses, gg"
+msgstr ""
+
+#: cogs/SmallGames.py:600
+msgid "Pick a number between **1** and **{maxnum}**"
+msgstr ""
+
+#: cogs/SmallGames.py:612 cogs/SmallGames.py:671
+msgid "Game canceled due to timeout."
+msgstr ""
+
+#: cogs/SmallGames.py:618
+msgid "The secret number is **smaller** than **{attempt}**"
+msgstr ""
+
+#: cogs/SmallGames.py:621
+msgid "The secret number is **bigger** than **{attempt}**"
+msgstr ""
+
+#: cogs/SmallGames.py:624
+msgid "{} **won the game**"
+msgstr ""
+
+#: cogs/SmallGames.py:632
+msgid "There is already a game running in this channel"
+msgstr ""
+
+#: cogs/SmallGames.py:656
+msgid "Game started!"
+msgstr ""
+
+#: cogs/SmallGames.py:657
+msgid "Guess the word (You have only 6 tries)"
+msgstr ""
+
+#: cogs/SmallGames.py:661
+msgid "Word"
+msgstr ""
+
+#: cogs/SmallGames.py:662
+msgid "Used letters"
+msgstr ""
+
+#: cogs/SmallGames.py:662
+msgid "*No letters*"
+msgstr ""
+
+#: cogs/SmallGames.py:701
+msgid "The man is hanged. You ran out of tries. The word was: {word}"
+msgstr ""
+
+#: cogs/SmallGames.py:705
+msgid "Congrats, you guessed the word!"
+msgstr ""
+
+#: cogs/SmallGames.py:726
+msgid "Resuming a game of Blackjack..."
+msgstr ""
+
+#: cogs/SmallGames.py:726
+msgid "{nickname} bet **{bet}** coins to play blackjack"
+msgstr ""
+
+#: cogs/SmallGames.py:741
+msgid "You didn't wager any coins!"
+msgstr ""
+
+#: cogs/SmallGames.py:744
+msgid "You are not registered or not logged in"
+msgstr ""
+
+#: cogs/SmallGames.py:754 cogs/SmallGames.py:757
+msgid "Using **10** as a wager..."
+msgstr ""
+
+#: cogs/SmallGames.py:760
+msgid "Using **200000** as a wager..."
+msgstr ""
+
+#: cogs/SmallGames.py:766
+msgid "You don't have enough coins. *Minimal value is* **10**"
+msgstr ""
+
+#: cogs/SmallGames.py:768
+msgid "You don't have enough coins. *You have only **{user_cash}** coins*"
+msgstr ""
+
+#: cogs/SmallGames.py:799
+msgid "Blackjack"
+msgstr ""
+
+#: cogs/SmallGames.py:799
+msgid "{nickname} bet **{cash}** coins to play blackjack"
+msgstr ""
+
+#: cogs/SmallGames.py:864
+msgid "Bagels - {mode}"
+msgstr ""
+
+#: cogs/SmallGames.py:865
+msgid ""
+"I have thought of {digits}-digit number. Try to guess it, you have "
+"{guesses} tries"
+msgstr ""
+
+#: cogs/SmallGames.py:868
+msgid ""
+"Need help with figuring it out? Use button 𝐡𝐞𝐥𝐩 to get more information "
+"on the mode"
+msgstr ""
+
+#: cogs/SmallGames.py:877
+msgid "Game abandoned."
+msgstr ""
+
+#: cogs/SmallGames.py:884
+msgid "This guess has repeating digits. Please pick a different guess"
+msgstr ""
+
+#: cogs/SmallGames.py:906
+msgid "Congrats, you are victorious"
+msgstr ""
+
+#: cogs/SmallGames.py:907
+msgid "{mention} won in the {arg} mode. It took {amount} guesses"
+msgstr ""
+
+#: cogs/SmallGames.py:915
+msgid "Sorry to inform you, but you lost"
+msgstr ""
+
+#: cogs/SmallGames.py:916
+msgid "You are out of tries. The number was **{number}**"
+msgstr ""
+
+#: cogs/SmallGames.py:973
+msgid "Please input a 4-digit number"
+msgstr ""
+
+#: cogs/SmallGames.py:1096
+msgid "Anonymous"
+msgstr ""
+
+#: cogs/SmallGames.py:1105
+msgid "The requested game was not found."
+msgstr ""
+
+#: cogs/SmallGames.py:1110
+msgid "Game not played by requested user"
+msgstr ""
+
+#: cogs/SmallGames.py:1110
+msgid "The requested user did not play this game."
+msgstr ""
+
+#: cogs/SmallGames.py:1120
+msgid " by guessingFinished. by timeout"
+msgstr ""
+
+#: cogs/SmallGames.py:1122
+msgid " - ***Winner***"
+msgstr ""
+
+#: cogs/SmallGames.py:1123
+msgid "Players"
+msgstr ""
+
+#: cogs/SmallGames.py:1124
+msgid "Date played"
+msgstr ""
+
+#: cogs/SmallGames.py:1125
+msgid "Duration"
+msgstr ""
+
+#: cogs/SmallGames.py:1126
+msgid "Amount of turns"
+msgstr ""
+
+#: cogs/SmallGames.py:1127 cogs/SmallGames.py:1144
+msgid "Page: 1/{total_pages}"
+msgstr ""
+
+#: cogs/SmallGames.py:1143
+msgid "Games archive"
+msgstr ""
+
+#: cogs/SmallGames.py:1143
+msgid "{}' archive of played **Bulls and Cows** games {}"
+msgstr ""
+
+#: cogs/SmallGames.py:1143
+msgid "against {mention}"
+msgstr ""
+
+#: cogs/SmallGames.py:1146
+msgid "No games"
+msgstr ""
+
+#: cogs/SmallGames.py:1146
+msgid "I couldn't find any games "
+msgstr ""
+
+#: cogs/SmallGames.py:1157
+msgid "Win"
+msgstr ""
+
+#: cogs/SmallGames.py:1157
+msgid "Loss"
+msgstr ""
+
+#: cogs/Stats.py:30
+msgid "{user} has no account yet"
+msgstr ""
+
+#: cogs/Stats.py:36
+msgid "Bot usage statistics"
+msgstr ""
+
+#: cogs/Stats.py:41
+msgid "Total commands used"
+msgstr ""
+
+#: cogs/Stats.py:46
+msgid "Number guessing game"
+msgstr ""
+
+#: cogs/Stats.py:47
+msgid ""
+"**Wins:** \n"
+"· easy: {easy}\n"
+"· medium: {medium}\n"
+"· hard: {hard}"
+msgstr ""
+
+#: cogs/Stats.py:50
+msgid "Hangman game"
+msgstr ""
+
+#: cogs/Stats.py:51
+msgid ""
+"**Short Words:** {short_wins} W/{short_losses} L\n"
+"**Long Words:** {long_wins} W/{long_losses} L{legacy}"
+msgstr ""
+
+#: cogs/Stats.py:57
+msgid ""
+"\n"
+"*Legacy:* {leg_wins} W/{leg_losses} L"
+msgstr ""
+
+#: cogs/Stats.py:62
+msgid "Bulls and Cows"
+msgstr ""
+
+#: cogs/Stats.py:63
+msgid ""
+"**Wins:** {wins} \n"
+"**Losses:** {losses}"
+msgstr ""
+
+#: cogs/Stats.py:66
+msgid "Bagels"
+msgstr ""
+
+#: cogs/Stats.py:67
+msgid "** · Fast:** "
+msgstr ""
+
+#: cogs/Stats.py:67 cogs/Stats.py:68 cogs/Stats.py:69 cogs/Stats.py:70
+msgid "{wins} Wins/{losses} Losses/{abandoned} Abandoned"
+msgstr ""
+
+#: cogs/Stats.py:68
+msgid ""
+"\n"
+"** · Classic:** "
+msgstr ""
+
+#: cogs/Stats.py:69
+msgid ""
+"\n"
+"** · Long:** "
+msgstr ""
+
+#: cogs/Stats.py:70
+msgid ""
+"\n"
+"** · Hard:** "
+msgstr ""
+
+#: cogs/Stats.py:74
+msgid "Rickroll"
+msgstr ""
+
+#: cogs/Stats.py:75
+msgid ""
+"**Got rickrolled:** {themselves} \n"
+"**Rickrolled someone else:** {others}"
+msgstr ""
+
+#: cogs/Wolvesville.py:58
+msgid "Can't update information so frequently. Try again in **{timeleft}**"
+msgstr ""
+
+#: cogs/Wolvesville.py:68 cogs/Wolvesville.py:439
+msgid "**Leader:** "
+msgstr ""
+
+#: cogs/Wolvesville.py:69 cogs/Wolvesville.py:89 cogs/Wolvesville.py:440
+#: cogs/Wolvesville.py:460
+msgid ""
+"\n"
+"**---Co-leaders---**"
+msgstr ""
+
+#: cogs/Wolvesville.py:71 cogs/Wolvesville.py:90 cogs/Wolvesville.py:442
+#: cogs/Wolvesville.py:461
+msgid ""
+"\n"
+"**...Members...**"
+msgstr ""
+
+#: cogs/Wolvesville.py:92 cogs/Wolvesville.py:95 cogs/Wolvesville.py:97
+#: cogs/Wolvesville.py:427 cogs/Wolvesville.py:463 cogs/Wolvesville.py:466
+#: cogs/Wolvesville.py:468
+msgid "Members"
+msgstr ""
+
+#: cogs/Wolvesville.py:123
+msgid "Not enough data for graph"
+msgstr ""
+
+#: cogs/Wolvesville.py:176
+msgid "{user}' skill points over time"
+msgstr ""
+
+#: cogs/Wolvesville.py:177
+msgid "Date"
+msgstr ""
+
+#: cogs/Wolvesville.py:178
+msgid "Skill points"
+msgstr ""
+
+#: cogs/Wolvesville.py:188
+msgid "Line - season reset"
+msgstr ""
+
+#: cogs/Wolvesville.py:214
+msgid "Can't update information so frequently. Try again in **{again_in}**"
+msgstr ""
+
+#: cogs/Wolvesville.py:283
+msgid "You are not the one choosing! :pouting_cat:"
+msgstr ""
+
+#: cogs/Wolvesville.py:308
+msgid "No clan name specified. Correct syntax: `.wov-clan {clan name}`"
+msgstr ""
+
+#: cogs/Wolvesville.py:323
+msgid "Couldn't find any clan with that name."
+msgstr ""
+
+#: cogs/Wolvesville.py:333
+msgid "Clans found"
+msgstr ""
+
+#: cogs/Wolvesville.py:333
+msgid "use select menu in order to get information on the clan you need"
+msgstr ""
+
+#: cogs/Wolvesville.py:346
+msgid "*No description*"
+msgstr ""
+
+#: cogs/Wolvesville.py:362
+msgid "Timeout error"
+msgstr ""
+
+#: cogs/Wolvesville.py:362
+msgid "No clan number received"
+msgstr ""
+
+#: cogs/Wolvesville.py:401
+msgid "General clan information about \"{clan_name}\" on Wolvesville"
+msgstr ""
+
+#: cogs/Wolvesville.py:404
+msgid "Description"
+msgstr ""
+
+#: cogs/Wolvesville.py:408
+msgid "Public clan"
+msgstr ""
+
+#: cogs/Wolvesville.py:410
+msgid "Invite only clan"
+msgstr ""
+
+#: cogs/Wolvesville.py:412
+msgid "Closed clan"
+msgstr ""
+
+#: cogs/Wolvesville.py:414
+msgid "Member count"
+msgstr ""
+
+#: cogs/Wolvesville.py:418
+msgid "August 3, 2018 or before"
+msgstr ""
+
+#: cogs/Wolvesville.py:419 cogs/Wolvesville.py:589
+msgid "Creation date"
+msgstr ""
+
+#: cogs/Wolvesville.py:420
+msgid "Clan status"
+msgstr ""
+
+#: cogs/Wolvesville.py:421
+msgid "Minimum level to join"
+msgstr ""
+
+#: cogs/Wolvesville.py:422
+msgid "Quests"
+msgstr ""
+
+#: cogs/Wolvesville.py:427
+msgid "*loading...* {emoji}"
+msgstr ""
+
+#: cogs/Wolvesville.py:478
+msgid "No username provided. Correct syntax: `.wov-player {username}`"
+msgstr ""
+
+#: cogs/Wolvesville.py:482
+msgid "Username is too short. At least 3 characters required"
+msgstr ""
+
+#: cogs/Wolvesville.py:493
+msgid "Couldn't find any user with that username. *Maybe they changed it?*"
+msgstr ""
+
+#: cogs/Wolvesville.py:515 cogs/Wolvesville.py:538
+msgid "All avatars"
+msgstr ""
+
+#: cogs/Wolvesville.py:516
+msgid "Rendering"
+msgstr ""
+
+#: cogs/Wolvesville.py:516
+msgid "loading... {emoji}"
+msgstr ""
+
+#: cogs/Wolvesville.py:541
+msgid "Avatar {num}"
+msgstr ""
+
+#: cogs/Wolvesville.py:576
+msgid "Personal Message"
+msgstr ""
+
+#: cogs/Wolvesville.py:577
+msgid "Level"
+msgstr ""
+
+#: cogs/Wolvesville.py:582
+msgid "Player is online"
+msgstr ""
+
+#: cogs/Wolvesville.py:584
+msgid "Last online"
+msgstr ""
+
+#: cogs/Wolvesville.py:588
+msgid "*Date is private*"
+msgstr ""
+
+#: cogs/Wolvesville.py:590
+msgid "Roses"
+msgstr ""
+
+#: cogs/Wolvesville.py:590
+msgid ""
+"Roses received: **{}** {}\n"
+"Roses sent: **{}** {} \n"
+"Diff: **{}**"
+msgstr ""
+
+#: cogs/Wolvesville.py:597
+msgid "Honor"
+msgstr ""
+
+#: cogs/Wolvesville.py:597
+msgid "*Ask developers to update the API*"
+msgstr ""
+
+#: cogs/Wolvesville.py:605 cogs/Wolvesville.py:611 cogs/Wolvesville.py:617
+msgid "**?**"
+msgstr ""
+
+#: cogs/Wolvesville.py:608
+msgid "*Didn't participate in current season or data is private*"
+msgstr ""
+
+#: cogs/Wolvesville.py:614 cogs/Wolvesville.py:620
+msgid "*Didn't participate in any season yet or data is private*"
+msgstr ""
+
+#: cogs/Wolvesville.py:625 cogs/Wolvesville.py:639
+msgid "*Data is private*"
+msgstr ""
+
+#: cogs/Wolvesville.py:627
+msgid "Ranked stats"
+msgstr ""
+
+#: cogs/Wolvesville.py:627
+msgid ""
+"Current sp: {}\n"
+"Overall best sp: {}\n"
+"Best season final rank: {}\n"
+"Seasons participated in: **{}**"
+msgstr ""
+
+#: cogs/Wolvesville.py:643
+msgid ""
+"Total games played: **{}**\n"
+"Total wins: **{} ({:.2f}%)**\n"
+"Total defeats: **{} ({:.2f}%)**\n"
+"Total ties: **{} ({:.2f}%)**\n"
+"Flee count: **{} ({:.2f}%)**\n"
+"Total playtime: **{}**"
+msgstr ""
+
+#: cogs/Wolvesville.py:656 cogs/Wolvesville.py:678
+msgid "*This data is private*"
+msgstr ""
+
+#: cogs/Wolvesville.py:663
+msgid ""
+"Village: **{}** Wins/**{}** Defeats  **({}% wr)**\n"
+"Werewolves: **{}** Wins/**{}** Defeats  **({}% wr)**\n"
+"Solo voting: **{}** Wins/**{}** Defeats  **({}% wr)**\n"
+"Solo killer: **{}** Wins/**{}** Defeats  **({}% wr)**"
+msgstr ""
+
+#: cogs/Wolvesville.py:680
+msgid "Team stats"
+msgstr ""
+
+#: cogs/Wolvesville.py:710
+msgid ""
+"`{}` | **{}** :flag_{}: \n"
+"{}***...***\n"
+"*use `.wov-clan {}` for more information*"
+msgstr ""
+
+#: cogs/Wolvesville.py:718
+msgid "*Not in clan or this data is private*"
+msgstr ""
+
+#: cogs/Wolvesville.py:719
+msgid "Clan"
+msgstr ""
+
+#: cogs/Wolvesville.py:720
+msgid "Avatars"
+msgstr ""
+
+#: cogs/Wolvesville.py:720
+msgid "*Use command `.wov-player {username} avatars` for avatars*"
+msgstr ""
+
+#: cogs/Wolvesville.py:722
+msgid "Previous username"
+msgstr ""
+

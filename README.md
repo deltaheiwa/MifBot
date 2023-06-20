@@ -1,3 +1,1 @@
-# Mif Bot
-
-## Stable version
+# MifBot

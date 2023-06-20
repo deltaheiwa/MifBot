@@ -1,0 +1,72 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR ORGANIZATION
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.2.5\n"
+"POT-Creation-Date: 2023-02-25 21:17+0200\n"
+"PO-Revision-Date: 2023-02-25 21:53+0200\n"
+"Last-Translator: Dan Shap <georgi.jolak@gmail.com>\n"
+"Language-Team: English US <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+
+
+#: main.py:98
+msgid "Couldn't find such user on discord"
+msgstr "Couldn't find such user on discord"
+
+#: main.py:98
+msgid "Error"
+msgstr "Error"
+
+#: main.py:103
+msgid "Slow down"
+msgstr "Slow down"
+
+#: main.py:103
+msgid "You can retry in **{error.retry_after:.2f}s**."
+msgstr "You can retry in **{error.retry_after:.2f}s**."
+
+#: main.py:107
+msgid "No active characters"
+msgstr "No active characters"
+
+#: main.py:107
+msgid "You haven't selected any characters."
+msgstr "You haven't selected any characters."
+
+#: main.py:243
+msgid "Prefix changed to: {prefix}"
+msgstr "Prefix changed to: {prefix}"
+
+#: main.py:249
+msgid "Error, user missing permissions"
+msgstr "Error, user missing permissions"
+
+#: main.py:250
+msgid ":x: Only `Administrator` or user with `Manage Server` permissions can change the prefix"
+msgstr ":x: Only `Administrator` or user with `Manage Server` permissions can change the prefix"
+
+#: main.py:261 main.py:263 main.py:269
+msgid "Avatar"
+msgstr "Avatar"
+
+#: main.py:264
+msgid "User's avatar"
+msgstr "User's avatar"
+
+#: main.py:266 main.py:268
+msgid "User Info"
+msgstr "User Info"
+
+#: main.py:284
+msgid "Info about user"
+msgstr "Info about user"
+
+#: main.py:285
+msgid "Here is the info I retrieved about {user}"
+msgstr "Here is the info I retrieved about {user}"
