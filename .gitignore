@@ -7,8 +7,6 @@ TODO
 .VSCodeCounter/
 .mypy_cache
 db_data/game.sqbpro
-db_data/databases
-db_data/mysql_tables.py
 fixes.txt
 *.db
 databases.zip
@@ -22,5 +20,10 @@ words.json
 bot_strings/
 cogs/Secret.py
 creds/
+*.zip
+node_modules/
+.pylintrc
+db_data/
+Wov Cache/
+bot_config_perma.json
 *.mo
-/Wov Cache

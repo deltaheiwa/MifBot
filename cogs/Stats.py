@@ -3,7 +3,7 @@ import random
 import asyncio
 import json
 from discord.ext import commands
-from util.bot_functions import *
+from bot_util.bot_functions import *
 from db_data.mysql_main import DatabaseFunctions as DF
 from db_data.mysql_main import JsonOperating as JO
 

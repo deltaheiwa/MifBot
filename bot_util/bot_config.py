@@ -1,11 +1,19 @@
 import discord
 from pathlib import Path
-from datetime import datetime as datetimefix
+from datetime import datetime as dt
+from dotenv import load_dotenv
+import json
 
-version = "0.3"
-admin_account_ids = [835883093662761000,884407684693110795]
-bot_ids = [925520778408103977, 873133022973665290]
-testing_guild_id = 925749115252523069
+load_dotenv('../creds/.env')
+
+perma_config = json.load(open('./bot_util/bot_config_perma.json', 'r'))
+
+version = "0.3.1"
+admin_account_ids = perma_config["admin_account_ids"]
+bot_ids = perma_config["bot_ids"]
+testing_guild_id = perma_config["testing_guild_id"]
+main_guild_id = perma_config["main_guild_id"]
+telegram_chat_id: list[int] = perma_config["telegram_chat_ids"]
 
 class CustomEmojis:
     empty = "<:empty:906884148336148490>"
@@ -36,7 +44,7 @@ class CustomColors:
     saffron = discord.Color.from_rgb(245, 220, 59)
     dark_red = discord.Color.dark_red()
 
-wov_season_resets = [datetimefix(2022,10,18,3),datetimefix(2022,11,30,3), datetimefix(2023,7,3,3)]
+wov_season_resets = [dt(2022,10,18,3),dt(2022,11,30,3), dt(2023,7,3,3), dt(2023,8,15,3), dt(2023,11,9,3), dt(2023,12,22,3)]
 
 class LogFiles:
     wolvesville_log = Path('bot_logs/', 'Wolvesville.log')
@@ -49,8 +57,10 @@ class LogFiles:
     adventure_log = Path('bot_logs/', 'adventure.log')
     gf_log = Path('bot_logs/', 'gf.log')
     special_log = Path('bot_logs/', 'special.log')
+    telegram_log = Path('bot_logs/', 'telegram.log')
 
 launch_variables = {
     "local_db": False,
-    "rewrite_userdata": False
+    "rewrite_userdata": False,
+    "telegram_bot": True,
 }

@@ -4,12 +4,15 @@ from typing import Union
 import httplib2
 from googleapiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
-import creds
-# from bot_functions import *
+from dotenv import load_dotenv
+import os
 
+
+load_dotenv('creds/.env')
 
 def get_service_simple():
-    return build('sheets', 'v4', developerKey=creds.api_key)
+
+    return build('sheets', 'v4', developerKey=os.getenv('SHEETS_API_KEY'))
 
 
 def get_service_sacc():
@@ -42,12 +45,13 @@ class SheetsData:
 def run():
     service = get_service_sacc()
     sheet = service.spreadsheets()
-    resp_enemies = sheet.values().get(spreadsheetId=creds.sheet_id,range="Enemies!A2:S35").execute()
-    resp_items = sheet.values().get(spreadsheetId=creds.sheet_id,range="Items!A2:S35").execute()
-    resp_weapons = sheet.values().get(spreadsheetId=creds.sheet_id,range="Weapons!A2:S35").execute()
-    resp_armor = sheet.values().get(spreadsheetId=creds.sheet_id,range="Armor!A2:S35").execute()
-    resp_characters = sheet.values().get(spreadsheetId=creds.sheet_id, range="Characters!A2:S35").execute()
-    resp_artefacts = sheet.values().get(spreadsheetId=creds.sheet_id, range="Artefacts!A2:S35").execute()
+    sheet_id = os.getenv('SHEET_ID')
+    resp_enemies = sheet.values().get(spreadsheetId=sheet_id,range="Enemies!A2:S35").execute()
+    resp_items = sheet.values().get(spreadsheetId=sheet_id,range="Items!A2:S35").execute()
+    resp_weapons = sheet.values().get(spreadsheetId=sheet_id,range="Weapons!A2:S35").execute()
+    resp_armor = sheet.values().get(spreadsheetId=sheet_id,range="Armor!A2:S35").execute()
+    resp_characters = sheet.values().get(spreadsheetId=sheet_id, range="Characters!A2:S35").execute()
+    resp_artefacts = sheet.values().get(spreadsheetId=sheet_id, range="Artefacts!A2:S35").execute()
     SheetsData.enemies = resp_enemies['values']
     SheetsData.general_items = resp_items['values']
     SheetsData.weapons = resp_weapons['values']

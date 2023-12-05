@@ -4,14 +4,15 @@ import json
 import random
 from io import BytesIO
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
+from random_chess_opening.core import generate_opening
 import discord
 from discord.ext import commands
+import berserk
 
 from datetime import datetime as dt
 
 import GameFunctions as GF
-from util.bot_functions import *
+from bot_util.bot_functions import *
 from get_sheets import SheetsData
 from db_data import database_main
 from db_data.mysql_main import DatabaseFunctions as DF
@@ -34,7 +35,8 @@ class Secret(commands.Cog):
 
     @commands.command()
     async def test(self, ctx: commands.Context):
-        pass
+        L = "you"
+        
 
 
 async def setup(bot):

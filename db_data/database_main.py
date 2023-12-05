@@ -1,9 +1,9 @@
 import logging
 from pathlib import Path
 import sqlite3
-from util.bot_functions import CustomFormatter
+from bot_util.bot_functions import CustomFormatter
 import coloredlogs
-import util.bot_config as bot_config
+import bot_util.bot_config as bot_config
 import GameFunctions as GF
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class Databases:
 
 class PrefixDatabase:
     @staticmethod
-    async def new_prefix(guild_id, prefix):
+    async def new_prefix(guild_id: int, prefix: str):
         with sqlite3.connect(Databases.prefixes) as conn:
             c = conn.cursor()
             if prefix is None:
@@ -41,14 +41,14 @@ class PrefixDatabase:
                 conn.commit()
 
     @staticmethod
-    async def remove_prefix(guild_id):
+    async def remove_prefix(guild_id: int):
         with sqlite3.connect(Databases.prefixes) as conn:
             c = conn.cursor()
             c.execute(f"DELETE FROM prefixes WHERE guild_id = {guild_id};")
             conn.commit()
 
     @staticmethod
-    async def return_prefix(_id, user=False):
+    async def return_prefix(_id: int, user: bool=False):
         with sqlite3.connect(Databases.prefixes) as conn:
             c = conn.cursor()
             c.execute(f'''SELECT prefix FROM prefixes WHERE guild_id = {_id};''')

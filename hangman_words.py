@@ -1,3 +1,4 @@
+"""Extracts words from json file and stores them in a list."""
 import json
 
 
@@ -52,9 +53,8 @@ _______
 |
 ========''']
 
-with open('words.json', 'r') as f:
-   words = json.load(f)
+with open('words.json', 'r', encoding="utf-8") as f:
+    words = json.load(f)
 
 words_short = words['short']
 words_long = words['long']
-

@@ -1,20 +1,25 @@
-from socket import timeout
-import sys
 import discord
 from discord import app_commands
 import random
 import asyncio
-import json
 import pytz
+import logging
+import coloredlogs
+import re
+import math
 from discord.ext import commands
-from util.bot_functions import *
-from hangman_words import *
-import util.bot_config as b_cfg
-from datetime import datetime as datetimefix
-import GameFunctions as GF
+from bot_util.bot_functions import CustomFormatter, AsyncTranslator, repeating_symbols, pretty_date, pretty_time_delta
+from bot_util.functions import games
+from hangman_words import words_long, words_short, pics
+from bot_util import bot_config
+from datetime import datetime as dt
+import calendar
 from db_data.mysql_main import DatabaseFunctions as DF
 from db_data.mysql_main import JsonOperating as JO
-from typing import Optional
+from typing import Optional, Union
+
+
+# Constants ------------------------------
 
 global NG_GUILD_CHECK
 NG_GUILD_CHECK = set()
@@ -24,6 +29,8 @@ BAC_GAMES_DICT = dict()
 
 global BJ_GAMES_DICT
 BJ_GAMES_DICT = dict()
+
+# ---------------------------------------
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -48,7 +55,7 @@ def check_numbers(channel_id):
 
 class JoinButton(discord.ui.Button):
     def __init__(self, channel_id, passed_embed=None): 
-        super().__init__(label=f"Join (1/4)", style=discord.ButtonStyle.green)
+        super().__init__(label="Join (1/4)", style=discord.ButtonStyle.green)
         self.channel_id = channel_id
         self.passed_embed = passed_embed
 
@@ -86,7 +93,7 @@ class JoinButton(discord.ui.Button):
 
 class LeaveButton(discord.ui.Button):
     def __init__(self, channel_id, join_button, passed_embed=None):
-        super().__init__(label=f"Leave", style=discord.ButtonStyle.red, custom_id="leave")
+        super().__init__(label="Leave", style=discord.ButtonStyle.red, custom_id="leave")
         self.join_button = join_button
         self.channel_id = channel_id
         self.passed_embed = passed_embed
@@ -118,7 +125,7 @@ class LeaveButton(discord.ui.Button):
 
 class StartButton(discord.ui.Button):
     def __init__(self, channel_id, host_id):
-        super().__init__(label=f"Start", style=discord.ButtonStyle.blurple, custom_id="start")
+        super().__init__(label="Start", style=discord.ButtonStyle.blurple, custom_id="start")
         self.channel_id = channel_id
         self.host_id = host_id
     
@@ -282,7 +289,7 @@ class NumberForBAC(discord.ui.Modal):
             await channel.send(content=f"{interaction.user.mention} is ready!")
             if check_numbers(self.channel_id) is True:
                 await asyncio.sleep(3.0)
-                await channel.send(content=f"Game starting...", delete_after = 3.0)
+                await channel.send(content="Game starting...", delete_after = 3.0)
         else:
             async with AsyncTranslator(language_code=JO.get_lang_code(interaction.user.id)) as lang:
                 lang.install()
@@ -364,109 +371,56 @@ class GuessModalBAC(discord.ui.Modal):
 
 
 class BlackjackHitStop(discord.ui.View):
-    def __init__(self, user_b, embed, gettext_lang):
-        self._ = gettext_lang
+    def __init__(self, user_b, gettext_lang):
         super().__init__(timeout=None)
-        self.embed_game = embed
         self.user_b = user_b
-    
+        self._ = gettext_lang
+
     @discord.ui.button(label="Hit", style=discord.ButtonStyle.green)
     async def callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        DRAW_CARD('player', 3, BJ_GAMES_DICT[f'{self.user_b.id}'])
-        d_embed = self.embed_game.copy()
-        d_embed.clear_fields()
-        d_embed = d_embed.to_dict()
-        new_embed = discord.Embed()
-        view = self
-        game_ended = False
-        
-        if BJ_GAMES_DICT[f'{self.user_b.id}']['player']['points_total'] > 21: BJ_GAMES_DICT[f'{self.user_b.id}']['player']['busted'] = True
-        else: BJ_GAMES_DICT[f'{self.user_b.id}']['player']['busted'] = False
-        if BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['points_total'] > 21: BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['busted'] = True
-        else: BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['busted'] = False
-        
-        if BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['busted'] == True and BJ_GAMES_DICT[f'{self.user_b.id}']['player']['busted'] == True:
-            container_embed = discord.Embed(title=d_embed['title'], description=d_embed['description'], color=discord.Color.from_rgb(108, 128, 128))
-            container_embed.set_footer(text=self._("Both you and Dealer bust. You both received your coins back"))
-            new_embed = container_embed
-            game_ended = True
-        elif BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['busted'] == True:
-            container_embed = discord.Embed(title=d_embed['title'], description=d_embed['description'], color=discord.Color.from_rgb(90, 255, 255))
-            container_embed.set_footer(text=self._("Dealer busts. You received {amount} coins").format(amount=BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['coins_bet'] * 2))
-            new_embed = container_embed
-            game_ended = True
-            DF.update_userdata(BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['user_id'], "cash", int(BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['user_coins'] + BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['coins_bet'] * 2))
-        elif BJ_GAMES_DICT[f'{self.user_b.id}']['player']['busted'] == True:
-            container_embed = discord.Embed(title=d_embed['title'], description=d_embed['description'], color=discord.Color.from_rgb(0, 165, 165))
-            container_embed.set_footer(text=self._("You bust and lost {amount} coins").format(amount=BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['coins_bet'])) 
-            new_embed = container_embed
-            game_ended = True
-        else:
-            container_embed = discord.Embed(title=d_embed['title'], description=d_embed['description'], color=discord.Color.from_rgb(0, 255, 255))
-            new_embed = container_embed
-        
-        player_value, dealer_value = "", ""
-        for i in range(1,int((len(BJ_GAMES_DICT[f'{self.user_b.id}']['player'])-3)/2)+1):
-            player_value += f"**{BJ_GAMES_DICT[f'{self.user_b.id}']['player'][f'card{i}']}**{BJ_GAMES_DICT[f'{self.user_b.id}']['player'][f'suit{i}']} "
+        user_id = self.user_b.id
+        game: dict = BJ_GAMES_DICT[user_id]['game']
+
+        # Drawing a card for the player
+        games.BlackJack.draw_card('player', 3, game)
+
+        # Update game state
+        player_busted, dealer_busted = games.BlackJack.update_game_state(game)
+
+        # Game status if dealer or player busted
+        game_ended = player_busted or dealer_busted
+
         if game_ended:
             view = None
-            dealer_pretotal = f"{BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['points_total']}"
-            for i in range(1,int((len(BJ_GAMES_DICT[f'{self.user_b.id}']['dealer'])-3)/2)+1):
-                dealer_value += f"**{BJ_GAMES_DICT[f'{self.user_b.id}']['dealer'][f'card{i}']}**{BJ_GAMES_DICT[f'{self.user_b.id}']['dealer'][f'suit{i}']} "
+            BJ_GAMES_DICT[user_id]['metadata']['game_ended'] = True
+            end_message, code = games.BlackJack.get_game_end_message_and_code(game, self._)
+            new_embed = games.BlackJack.create_blackjack_embed(game, end_message, self._, code)
+            games.BlackJack.process_results(code, user_id, game['player']['bet'])
         else:
-            dealer_pretotal = f"{BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['first_card_points']}+?"
-            for i in range(1,2):
-                dealer_value += f"**{BJ_GAMES_DICT[f'{self.user_b.id}']['dealer'][f'card{i}']}**{BJ_GAMES_DICT[f'{self.user_b.id}']['dealer'][f'suit{i}']} " + bot_config.CustomEmojis.question_mark
-        new_embed.add_field(name=f"{BJ_GAMES_DICT[f'{self.user_b.id}']['player']['nickname']} [{BJ_GAMES_DICT[f'{self.user_b.id}']['player']['points_total']}]", value=f"{player_value}", inline=True)
-        new_embed.add_field(name=f"Dealer [{dealer_pretotal}]", value=f"{dealer_value}", inline=True)
-        
+            view = self
+            new_embed = games.BlackJack.create_blackjack_embed(game, None, self._, games.BlackJackEndCodes.ONGOING)
+
         await interaction.response.edit_message(embed=new_embed, view=view)
+
+        # Clean up if game ended
         if game_ended:
-            del BJ_GAMES_DICT[f"{BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['user_id']}"]
+            del BJ_GAMES_DICT[user_id]
     
 
     @discord.ui.button(label="Stand", style=discord.ButtonStyle.red)
     async def callback2(self, interaction: discord.Interaction, button: discord.ui.Button):
-        d_embed = self.embed_game.copy()
-        d_embed.clear_fields()
-        d_embed = d_embed.to_dict()
-        new_embed = discord.Embed()
-        view = None
+        user_id = self.user_b.id
+        game: dict = BJ_GAMES_DICT[user_id]['game']
 
-        if BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['points_total'] > 21: BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['busted'] = True
-        else: BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['busted'] = False
+        # Update game state
+        games.BlackJack.update_game_state(game)
+        BJ_GAMES_DICT[user_id]['metadata']['game_ended'] = True
 
-        if BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['busted'] == True:
-            container_embed = discord.Embed(title=d_embed['title'], description=d_embed['description'], color=discord.Color.from_rgb(90, 255, 255))
-            container_embed.set_footer(text=self._("Dealer busts. You received {amount} coins").format(amount=BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['coins_bet'] * 2))
-            new_embed = container_embed
-            DF.update_userdata(BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['user_id'], "cash", int(BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['user_coins'] + BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['coins_bet']))
-        else:
-            if BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['points_total'] < BJ_GAMES_DICT[f'{self.user_b.id}']['player']['points_total']:
-                container_embed = discord.Embed(title=d_embed['title'], description=d_embed['description'], color=discord.Color.from_rgb(90, 255, 255))
-                container_embed.set_footer(text=self._("Dealer has less value than you. You received {amount} coins").format(amount=BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['coins_bet'] * 2))
-                new_embed = container_embed
-                DF.update_userdata(BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['user_id'], "cash", int(BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['user_coins'] + BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['coins_bet'] * 2))
-            elif BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['points_total'] > BJ_GAMES_DICT[f'{self.user_b.id}']['player']['points_total']:
-                container_embed = discord.Embed(title=d_embed['title'], description=d_embed['description'], color=discord.Color.from_rgb(0, 165, 165))
-                container_embed.set_footer(text=self._("You have less value than dealer, and lost {amount} coins").format(amount=BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['coins_bet']))
-                new_embed = container_embed
-            else:
-                container_embed = discord.Embed(title=d_embed['title'], description=d_embed['description'], color=discord.Color.from_rgb(108, 128, 128))
-                container_embed.set_footer(text=self._("It's a tie. You received your coins back"))
-                new_embed = container_embed
-        
-        player_value, dealer_value = "", ""
-        dealer_pretotal = f"{BJ_GAMES_DICT[f'{self.user_b.id}']['dealer']['points_total']}"
-        for i in range(1,int((len(BJ_GAMES_DICT[f'{self.user_b.id}']['player'])-2)/2)+1):
-            player_value += f"**{BJ_GAMES_DICT[f'{self.user_b.id}']['player'][f'card{i}']}**{BJ_GAMES_DICT[f'{self.user_b.id}']['player'][f'suit{i}']} "
-        for i in range(1,int((len(BJ_GAMES_DICT[f'{self.user_b.id}']['dealer'])-3)/2)+1):
-            dealer_value += f"**{BJ_GAMES_DICT[f'{self.user_b.id}']['dealer'][f'card{i}']}**{BJ_GAMES_DICT[f'{self.user_b.id}']['dealer'][f'suit{i}']} "
-        new_embed.add_field(name=f"{BJ_GAMES_DICT[f'{self.user_b.id}']['player']['nickname']} [{BJ_GAMES_DICT[f'{self.user_b.id}']['player']['points_total']}]", value=f"{player_value}", inline=True)
-        new_embed.add_field(name=f"Dealer [{dealer_pretotal}]", value=f"{dealer_value}", inline=True)
+        end_message, code = games.BlackJack.get_game_end_message_and_code(game, self._)
+        new_embed = games.BlackJack.create_blackjack_embed(game, end_message, self._, code)
+        games.BlackJack.process_results(code, user_id, game['player']['bet'])
 
-        await interaction.response.edit_message(embed=new_embed, view=view)
-        del BJ_GAMES_DICT[f"{BJ_GAMES_DICT[f'{self.user_b.id}']['user_data']['user_id']}"]
+        await interaction.response.edit_message(embed=new_embed, view=None)
     
     async def interaction_check(self, interaction) -> bool:
         if interaction.user.id == self.user_b.id:
@@ -484,8 +438,10 @@ class BacReplayRecordsPageDown(discord.ui.Button):
     
     async def callback(self, interaction: discord.Interaction):
         self.view._current_page -= 1
-        if self.view._current_page == 1: self.disabled = True
-        else: self.disabled = False
+        if self.view._current_page == 1: 
+            self.disabled = True
+        else: 
+            self.disabled = False
         self.view.children[1].disabled = False
         embed_page = discord.Embed.from_dict(self.view.pages[f"page_{(self.view._current_page - 1)}"])
         await interaction.response.edit_message(embed=embed_page, view=self.view)
@@ -502,18 +458,19 @@ class BacReplayRecordsPageUp(discord.ui.Button):
             embed_page = discord.Embed.from_dict(self.view.pages[f"page_{(self.view._current_page) - (0 if isinstance(self.view, BacReplayRecordsView) else 1)}"])
         else:
             if isinstance(self.view, BacReplayRecordsView):
-                embed_page = discord.Embed(title=self.view.pages['page_1']['title'], description=self.view.pages['page_1']['description'], color=b_cfg.CustomColors.cyan)
+                embed_page = discord.Embed(title=self.view.pages['page_1']['title'], description=self.view.pages['page_1']['description'], color=bot_config.CustomColors.cyan)
                 embed_page.set_footer(text=f"Page: {self.view._current_page}/{self.view._max_pages}")
                 embed_page, self.view.recorded_games = self.view.function(embed_page, self.view.recorded_games[12*(self.view._current_page-1):12*self.view._current_page])
                 self.view.pages[f"page_{self.view._current_page}"] = embed_page.to_dict()
             else:
                 turn = (self.view._current_page)-1
-                embed_page = discord.Embed(title=self.view.pages['page_0']['title'], description=f"Turn {turn}/{self.view._max_pages-1}", color=b_cfg.CustomColors.cyan)
+                embed_page = discord.Embed(title=self.view.pages['page_0']['title'], description=f"Turn {turn}/{self.view._max_pages-1}", color=bot_config.CustomColors.cyan)
                 embed_page.set_footer(text=f"Page: {self.view._current_page}/{self.view._max_pages}")
                 for player in self.view.game_dict[f'turn{turn}']:
                     value = f"**Initial guess — {self.view.game_dict[f'turn{turn}'][player]['initial_guess']}**"
                     for p in self.view.game_dict[f'turn{turn}'][player]:
-                        if p != "initial_guess": value += f"\n{self.view.player_list[int(p)]}: " \
+                        if p != "initial_guess": 
+                            value += f"\n{self.view.player_list[int(p)]}: " \
                         f"{self.view.game_dict[f'turn{turn}'][player][p]['cows']} cows, " \
                         f"{self.view.game_dict[f'turn{turn}'][player][p]['bulls']} bulls"
                     embed_page.add_field(name=f"{self.view.player_list[int(player)]}", value=value)
@@ -532,7 +489,8 @@ class BacReplayRecordsView(discord.ui.View):
         self.add_item(BacReplayRecordsPageUp(disabled=False if self._max_pages != self._current_page else True))
     
     async def on_timeout(self) -> None:
-        for button in self.children: button.disabled = True
+        for button in self.children: 
+            button.disabled = True
         await self.message.edit(view=self)
 
 class BacReplayGameView(discord.ui.View):
@@ -561,7 +519,7 @@ class SmallGames(commands.Cog):
         async with AsyncTranslator(JO.get_lang_code(ctx.author.id)) as at:
             at.install()
             _ = at.gettext
-            if difficulty == None:
+            if difficulty is None:
                 difficulty = "easy"
             match difficulty.lower():
                 case "easy":
@@ -579,7 +537,7 @@ class SmallGames(commands.Cog):
             n = random.randint(1, maxnum)
             guess = 100
             if channel.id not in NG_GUILD_CHECK:
-                embed=discord.Embed(title=_("Game started"), description=_("Start guessing :3"), color=b_cfg.CustomColors.cyan)
+                embed=discord.Embed(title=_("Game started"), description=_("Start guessing :3"), color=bot_config.CustomColors.cyan)
                 await ctx.send(embed=embed)
                 DF.add_command_stats(ctx.author.id)
                 NG_GUILD_CHECK.add(channel.id)
@@ -589,7 +547,7 @@ class SmallGames(commands.Cog):
                     elif guess == 0:
                         await ctx.send(_("You ran out of guesses, gg"))
                         break
-                    if hard == True:
+                    if hard is True:
                         if count > 0:
                             count -= 1
                         elif count == 0:
@@ -612,7 +570,6 @@ class SmallGames(commands.Cog):
                             continue
                         except asyncio.TimeoutError:
                             await ctx.send(_("Game canceled due to timeout."))
-                            check += 1
                             break
                         else:
                             break
@@ -627,7 +584,7 @@ class SmallGames(commands.Cog):
                         if DF.local_checks(msg.author.id) is True:
                             DF.add_stats(msg.author.id, f"ngWins.{difficulty}")
                         break
-                    elif attempt == None:
+                    elif attempt is None:
                         break
                 NG_GUILD_CHECK.remove(channel.id)
             else:
@@ -664,14 +621,14 @@ class SmallGames(commands.Cog):
             start_embed.add_field(name=_("Used letters"), value=_("*No letters*"), inline=False)
             main_message = await ctx.send(embed=start_embed)
             DF.add_command_stats(ctx.author.id)
-            while guessed == False and missed < 6:
+            while guessed is False and missed < 6:
                 try:
                     guess = await self.bot.wait_for(
                         "message", timeout=300, check=lambda m: m.channel.id == ctx.channel.id
                     )
                 except asyncio.TimeoutError:
                     await ctx.send(_("Game canceled due to timeout."))
-                    if DF.local_checks(ctx.author.id) == True:
+                    if DF.local_checks(ctx.author.id) is True:
                         DF.add_stats(ctx.author.id, f"hangman.{diff}.losses")
                     return
                 p_guess = (guess.content).lower()
@@ -701,120 +658,109 @@ class SmallGames(commands.Cog):
                 await main_message.edit(embed=discord.Embed.from_dict(second_embed))
             if missed == 6:
                 await ctx.send(_("The man is hanged. You ran out of tries. The word was: {word}").format(word=word_to_guess))
-                if DF.local_checks(guess.author.id) == True:
+                if DF.local_checks(guess.author.id) is True:
                     DF.add_stats(guess.author.id, f"hangman.{diff}.losses")
             elif missed <= 5:
                 await ctx.send(_("Congrats, you guessed the word!"))
-                if DF.local_checks(guess.author.id) == True:
+                if DF.local_checks(guess.author.id) is True:
                     DF.add_stats(guess.author.id, f"hangman.{diff}.wins")
 
     @commands.cooldown(1, 15, commands.BucketType.user)
     @commands.hybrid_command(name="blackjack", description="Play a round of blackjack using in-bot currency for bets and payouts", aliases=['bj'], with_app_command=True)
-    async def blackjack(self, ctx: commands.Context, cash=None):
+    async def blackjack(self, ctx: commands.Context, cash: str | None = None):
         user = ctx.author
         user_cash = None
-        pack = [2, 3, 4, 5, 6, 7, 8, 9, 10, "J", "Q", "K", "A"]
-        suits = ["<:clubs_out:997942006808588379>", "<:spades_out:997942007987183717>", ":hearts:", ":diamonds:"]
         
         async with AsyncTranslator(JO.get_lang_code(user.id)) as lang:
             lang.install()
             _ = lang.gettext
         
-            if str(user.id) in BJ_GAMES_DICT:
-                old_one = self.bot.get_channel(BJ_GAMES_DICT[f'{user.id}']['user_data']['channel_id'])
-                old_one = old_one.get_partial_message(BJ_GAMES_DICT[f'{user.id}']['user_data']['message_id'])
+            if user.id in BJ_GAMES_DICT:
+                BJ_GAMES_DICT[user.id]['metadata']['gettext'] = _
+                old_one = self.bot.get_channel(BJ_GAMES_DICT[user.id]['metadata']['channel_id'])
+                old_one = old_one.get_partial_message(BJ_GAMES_DICT[user.id]['metadata']['message_id'])
                 await old_one.delete()
-                nickname = BJ_GAMES_DICT[f'{user.id}']['player']['nickname']
-                embed_game = discord.Embed(title=_("Resuming a game of Blackjack..."), description=_("{nickname} bet **{bet}** coins to play blackjack").format(nickname=nickname, bet=BJ_GAMES_DICT[f'{user.id}']['user_data']['coins_bet']), color=bot_config.CustomColors.cyan) 
-                player_value, dealer_value = "", ""
-                dealer_pretotal = f"{BJ_GAMES_DICT[f'{user.id}']['dealer']['first_card_points']}+?"
-                for i in range(1,3):
-                    player_value += f"**{BJ_GAMES_DICT[f'{user.id}']['player'][f'card{i}']}**{BJ_GAMES_DICT[f'{user.id}']['player'][f'suit{i}']} "
-                for i in range(1,2):
-                    dealer_value += f"**{BJ_GAMES_DICT[f'{user.id}']['dealer'][f'card{i}']}**{BJ_GAMES_DICT[f'{user.id}']['dealer'][f'suit{i}']} " + bot_config.CustomEmojis.question_mark
-                embed_game.add_field(name=f"{nickname} [{BJ_GAMES_DICT[f'{user.id}']['player']['points_total']}]", value=f"{player_value}", inline=True)
-                embed_game.add_field(name=f"Dealer [{dealer_pretotal}]", value=f"{dealer_value}", inline=True)
-                view = BlackjackHitStop(user_b=user, embed=embed_game, gettext_lang=_)
+                game = BJ_GAMES_DICT[user.id]['game']
+                embed_game = games.BlackJack.create_blackjack_embed(game, _("Resuming a game of Blackjack..."), _, games.BlackJackEndCodes.ONGOING)
+                
+                view = BlackjackHitStop(user_b=user, gettext_lang=_)
                 original_message = await ctx.send(embed=embed_game, view=view)
-                BJ_GAMES_DICT[f'{user.id}']['user_data']['message_id'] = original_message.id
-                BJ_GAMES_DICT[f'{user.id}']['user_data']['channel_id'] = original_message.channel.id
+                DF.add_command_stats(user.id)
+                BJ_GAMES_DICT[user.id]['metadata']['message_id'] = original_message.id
+                BJ_GAMES_DICT[user.id]['metadata']['channel_id'] = original_message.channel.id
             else:
                 if cash is None:
                     await ctx.send(content=_("You didn't wager any coins!"), delete_after = 10.0)
-                else: 
-                    if DF.local_checks(user.id) == False:
-                        await ctx.send(content=_("You are not registered or not logged in"), delete_after = 10.0)
+                    return
+                
+                if DF.local_checks(user.id) is False:
+                    await ctx.send(content=_("You are not registered or not logged in"), delete_after = 10.0)
+                    return
+                
+                if cash.isdigit() is True:
+                    cash = int(cash)
+                else:
+                    if cash.lower() == "all":
+                        user_cash = int(DF.get_userdata_by_id(user.id, ["cash"])['cash'])
+                        cash = user_cash
                     else:
-                        if cash.isdigit() == True:
-                            cash = int(cash)
-                        else:
-                            if cash.lower() == "all":
-                                user_cash = DF.get_userdata_by_id(user.id, ["cash"])
-                                cash = user_cash["cash"]
-                                user_cash = cash
-                            else:
-                                await ctx.send(content=_("Using **10** as a wager..."), delete_after = 10.0)
-                                cash = 10
-                        if int(cash) < 10:
-                            await ctx.send(content=_("Using **10** as a wager..."), delete_after = 10.0)
-                            cash = 10
-                        elif int(cash) > 200000:
-                            await ctx.send(content=_("Using **200000** as a wager..."), delete_after = 10.0)
-                            cash = 200000
-                        if user_cash is None:
-                            user_cash = DF.get_userdata_by_id(user.id, ["cash"])
-                            user_cash = user_cash["cash"]
-                        if user_cash < 10:
-                            await ctx.send(_("You don't have enough coins. *Minimal value is* **10**"))
-                        elif user_cash < int(cash):
-                            await ctx.send(_("You don't have enough coins. *You have only **{user_cash}** coins*").format(user_cash=user_cash))
-                        else:
-                            nickname = DF.get_user_by_id(user.id, ["nickname"])
-                            nickname = nickname['nickname']
-                            BJ_GAMES_DICT[f'{user.id}'] = {"dealer": {}, "player": {}, "user_data": { "coins_bet": cash, "user_coins": user_cash, "user_id": user.id} }
-                            DF.update_userdata(user.id, "cash", int(user_cash - int(cash)))
-                            global DRAW_CARD
-                            def DRAW_CARD(p, i, dict_g):
-                                dict_g[f'{p}'][f'card{i}'] = random.choice(pack)
-                                dict_g[f'{p}'][f'suit{i}'] = random.choice(suits)
-                                if type(dict_g[f'{p}'][f'card{i}']) == str and dict_g[f'{p}'][f"card{i}"] != "A":
-                                    points = 10
-                                elif dict_g[f'{p}'][f"card{i}"] == "A":
-                                    if dict_g[f'{p}'][f'points_total'] + 11 > 21: points = 1
-                                    else: points = 11
-                                else:
-                                    points = dict_g[f'{p}'][f"card{i}"]
-                                if p == "dealer" and i == 1:
-                                    dict_g[f'{p}']['first_card_points'] = points
-                                dict_g[f'{p}']['points_total'] += points
-                            for i in range(1,3):
-                                for p in BJ_GAMES_DICT[f'{user.id}']:
-                                    print(p)
-                                    if p == "user_data": continue
-                                    if len(BJ_GAMES_DICT[f'{user.id}'][f'{p}']) == 0:
-                                        BJ_GAMES_DICT[f'{user.id}'][f'{p}']['points_total'] = 0
-                                    DRAW_CARD(p, i, BJ_GAMES_DICT[f'{user.id}'])
-                            card_num = 3
-                            while BJ_GAMES_DICT[f'{user.id}']['dealer']['points_total'] < 17:
-                                DRAW_CARD('dealer', card_num, BJ_GAMES_DICT[f'{user.id}'])
-                                card_num += 1
-                            embed_game = discord.Embed(title=_("Blackjack"), description=_("{nickname} bet **{cash}** coins to play blackjack").format(nickname=nickname, cash=cash), color=bot_config.CustomColors.cyan) 
-                            player_value, dealer_value = "", ""
-                            dealer_pretotal = f"{BJ_GAMES_DICT[f'{user.id}']['dealer']['first_card_points']}+?"
-                            for i in range(1,3):
-                                player_value += f"**{BJ_GAMES_DICT[f'{user.id}']['player'][f'card{i}']}**{BJ_GAMES_DICT[f'{user.id}']['player'][f'suit{i}']} "
-                            for i in range(1,2):
-                                dealer_value += f"**{BJ_GAMES_DICT[f'{user.id}']['dealer'][f'card{i}']}**{BJ_GAMES_DICT[f'{user.id}']['dealer'][f'suit{i}']} "
-                            dealer_value += bot_config.CustomEmojis.question_mark
-                            BJ_GAMES_DICT[f'{user.id}']['player']['nickname'] = nickname
-                            embed_game.add_field(name=f"{nickname} [{BJ_GAMES_DICT[f'{user.id}']['player']['points_total']}]", value=f"{player_value}", inline=True)
-                            embed_game.add_field(name=f"Dealer [{dealer_pretotal}]", value=f"{dealer_value}", inline=True)
-                            view = BlackjackHitStop(user_b=user, embed=embed_game, gettext_lang=_)
-                            original_message = await ctx.send(embed=embed_game, view=view)
-                            if DF.local_checks(user.id):
-                                DF.add_command_stats(user.id)
-                            BJ_GAMES_DICT[f'{user.id}']['user_data']['message_id'] = original_message.id
-                            BJ_GAMES_DICT[f'{user.id}']['user_data']['channel_id'] = original_message.channel.id
+                        await ctx.send(content=_("Using **10** as a wager..."), delete_after = 10.0)
+                        cash = 10
+                if cash < 10: # Min possible bet
+                    await ctx.send(content=_("Using **10** as a wager..."), delete_after = 10.0)
+                    cash = 10
+                elif cash > 200000: # Max possible bet
+                    await ctx.send(content=_("Using **200000** as a wager..."), delete_after = 10.0)
+                    cash = 200000
+                if user_cash is None:
+                    user_cash = DF.get_userdata_by_id(user.id, ["cash"])["cash"]
+                if user_cash < 10:
+                    await ctx.send(_("You don't have enough coins. *Minimal value is* **10**"))
+                    return
+                elif user_cash < cash:
+                    await ctx.send(_("You don't have enough coins. *You have only **{user_cash}** coins*").format(user_cash=user_cash))
+                    return
+                
+                nickname = DF.get_user_by_id(user.id, ["nickname"])['nickname']
+                BJ_GAMES_DICT[user.id] = {
+                    "game": { 
+                        "dealer": {
+                            "cards": [],
+                            "first_card_points": 0,
+                            "points_total": 0,
+                            "busted": False
+                        },
+                        "player": {
+                            "cards": [],
+                            "nickname": nickname,
+                            "bet": cash,
+                            "points_total": 0,
+                            "busted": False
+                        },
+                    },
+                    "metadata": {
+                        "gettext": _,
+                        "user_id": user.id,
+                        "channel_id": ctx.channel.id,
+                        "message_id": None,
+                        "game_ended": False
+                    }
+                }
+                DF.update_userdata(user.id, "cash", int(user_cash - int(cash)))
+                game = BJ_GAMES_DICT[user.id]['game']
+                
+                for player in game:
+                    games.BlackJack.draw_card(player, len(game[player]['cards']), game, 2)
+                
+                while game['dealer']['points_total'] < 21:
+                    games.BlackJack.draw_card('dealer', len(game['dealer']['cards']), game)
+
+                embed_game = games.BlackJack.create_blackjack_embed(game, _("Starting a new game of Blackjack..."), _, games.BlackJackEndCodes.ONGOING)
+
+                view = BlackjackHitStop(user_b=user, gettext_lang=_)
+                original_message = await ctx.send(embed=embed_game, view=view)
+                DF.add_command_stats(user.id)
+                BJ_GAMES_DICT[user.id]['metadata']['message_id'] = original_message.id
 
     @commands.command(aliases=['bulls'])
     async def bullsandcows(self, ctx: commands.Context, mode:str=None, arg: Union[Optional[discord.Member], str]=None):
@@ -839,8 +785,10 @@ class SmallGames(commands.Cog):
             case "records":
                 mode = "replay"
             case _:
-                if mode in modes: mode = mode
-                else: mode = "classic"
+                if mode in modes:
+                    mode = mode
+                else:
+                    mode = "classic"
         match arg:
             case None:
                 arg = "classic"
@@ -849,8 +797,10 @@ class SmallGames(commands.Cog):
             case "nerd":
                 arg = "long"
             case _:
-                if arg in args or mode == "replay": pass
-                else: arg = "classic"
+                if arg in args or mode == "replay": 
+                    pass
+                else:
+                    arg = "classic"
         
         async with AsyncTranslator(JO.get_lang_code(ctx.author.id)) as at:
             at.install()
@@ -880,7 +830,7 @@ class SmallGames(commands.Cog):
                             DF.add_command_stats(user.id)
                         break
                     guess_m = guess.content
-                    if repeating_symbols(guess_m) == True:
+                    if repeating_symbols(guess_m) is True:
                         await guess.reply(_("This guess has repeating digits. Please pick a different guess"))
                         continue
                     else:
@@ -943,7 +893,7 @@ class SmallGames(commands.Cog):
                                                     description="Press the green button to join the game",
                                                     color=discord.Color.from_rgb(0, 255, 255))
                     embedClassicStart.set_footer(
-                    text=f"Need help with figuring it out? Use button 𝐡𝐞𝐥𝐩 to get more information on the mode. Host must use 𝘀𝘁𝗮𝗿𝘁 button in order to start the game")
+                    text="Need help with figuring it out? Use button 𝐡𝐞𝐥𝐩 to get more information on the mode. Host must use 𝘀𝘁𝗮𝗿𝘁 button in order to start the game")
                     BAC_GAMES_DICT[f'{ctx.channel.id}'] = {}
                     BAC_GAMES_DICT[f'{ctx.channel.id}']['gameStarted'] = False
                     BAC_GAMES_DICT[f'{ctx.channel.id}'][f'{user.id}'] = {}
@@ -952,13 +902,12 @@ class SmallGames(commands.Cog):
                     view = ButtonsBACjoin(
                         ctx.message.channel.id, pass_embed=embedClassicStart, ctx=ctx)
                     view.message = await ctx.send(embed=embedClassicStart, view=view)
-                    if DF.local_checks(user.id):
-                        DF.add_command_stats(user.id)
+                    DF.add_command_stats(user.id)
 
                     if await view.wait() is True:
                         logger.info(f"BAC game timeout in {ctx.channel.id}")
                         return
-                    if BAC_GAMES_DICT[f'{ctx.channel.id}'] is not None and BAC_GAMES_DICT[f'{ctx.channel.id}']['gameStarted'] == True:
+                    if BAC_GAMES_DICT[f'{ctx.channel.id}'] is not None and BAC_GAMES_DICT[f'{ctx.channel.id}']['gameStarted'] is True:
                         p_ids = []
                         for p in BAC_GAMES_DICT[f'{ctx.channel.id}']:
                             p_ids.append(p)
@@ -979,7 +928,7 @@ class SmallGames(commands.Cog):
                             BAC_GAMES_DICT[f'{ctx.channel.id}'][f'{player}']['username'] = d_user.name
                             BAC_GAMES_DICT[f'{ctx.channel.id}'][f'{player}']['win_condt'] = 0
                             queue.append(BAC_GAMES_DICT[f'{ctx.channel.id}'][f'{player}']['username'])
-                            if DF.check_exists(d_user.id) == True:
+                            if DF.check_exists(d_user.id) is True:
                                 stat = JO.get_userdata_stats(d_user.id)[1]
                                 stat_gathering += f"**{BAC_GAMES_DICT[f'{ctx.channel.id}'][f'{player}']['username']}**: {stat['bulls']['number']['wins']} Wins/{stat['bulls']['number']['losses']} Losses\n"
                             else:
@@ -991,7 +940,7 @@ class SmallGames(commands.Cog):
                         main_message = await ctx.send(embed=embed_gamestarted)
                         main_embed_dict = embed_gamestarted.to_dict()
                         
-                        utcnow = datetimefix.utcnow()
+                        utcnow = dt.utcnow()
                         
                         json_game = {
                             "meta": {
@@ -1031,15 +980,15 @@ class SmallGames(commands.Cog):
                                     title="Timeout Error",
                                     description=f"{player_guessing} took more than 30 minutes to guess. Game abandoned.",
                                     color=discord.Color.from_rgb(255, 0, 0))
-                                if DF.local_checks(player_guessing.id) == True:
+                                if DF.local_checks(player_guessing.id) is True:
                                     await DF.add_stats(player_guessing.id, "bulls.number.losses")
                                 del p_ids[0]
                                 for player in p_ids:
                                     player_d = self.bot.get_user(int(player))
-                                    if DF.local_checks(player_d) == True:
+                                    if DF.local_checks(player_d) is True:
                                         DF.add_stats(player_d.id, "bulls.number.wins")
                                 await ctx.send(embed=embedError)
-                                time_finished = datetimefix.utcnow()
+                                time_finished = dt.utcnow()
                                 json_game['meta']['duration'] = time_finished - json_game["duration"]
                                 json_game['meta']['state'] = f"Abandoned. {player_guessing.id}"
                                 break
@@ -1049,19 +998,21 @@ class SmallGames(commands.Cog):
                                 json_game["game"][f"turn{turn}"] = {}
                             json_game["game"][f"turn{turn}"][f'{p_ids[0]}'] = results
                             for player in results:
-                                if player == "initial_guess": continue
-                                if results[f'{player}']['bulls'] == 4: BAC_GAMES_DICT[f'{ctx.channel.id}'][f'{p_ids[0]}']['win_condt'] += 1
+                                if player == "initial_guess":
+                                    continue
+                                if results[f'{player}']['bulls'] == 4:
+                                    BAC_GAMES_DICT[f'{ctx.channel.id}'][f'{p_ids[0]}']['win_condt'] += 1
                             if BAC_GAMES_DICT[f'{ctx.channel.id}'][f'{p_ids[0]}']['win_condt'] == len(results)-1:
                                 tries = len(json_game["game"])
-                                embed_win = discord.Embed(title=f"Game ended", description=f"{player_guessing.mention} is the winner. It took them {tries} guesses", color=bot_config.CustomColors.cyan)
+                                embed_win = discord.Embed(title="Game ended", description=f"{player_guessing.mention} is the winner. It took them {tries} guesses", color=bot_config.CustomColors.cyan)
                                 await ctx.send(embed=embed_win)
-                                if DF.local_checks(player_guessing.id) == True:
+                                if DF.local_checks(player_guessing.id):
                                     DF.add_stats(player_guessing.id, "bulls.number.wins")
                                 del p_ids[0]
                                 for player in p_ids:
-                                    if DF.local_checks(int(player)) == True:
+                                    if DF.local_checks(int(player)):
                                         DF.add_stats(int(player), "bulls.number.losses")
-                                time_finished = datetimefix.utcnow()
+                                time_finished = dt.utcnow()
                                 json_game['meta']['duration'] = time_finished - json_game["meta"]["duration"]
                                 json_game['meta']['state'] = f"Finished. {player_guessing.id}"
                                 break
@@ -1077,12 +1028,15 @@ class SmallGames(commands.Cog):
                     if DF.local_checks(user.id):
                         nickname = DF.get_user_by_id(user.id, ["nickname"])
                         nickname = nickname['nickname']
-                    else: nickname = user.name
+                        DF.add_command_stats(user.id)
+                    else:
+                        nickname = user.name
                     
                     def create_player_list(player_list, temp_cache):
                         return_dict = {}
                         for player in player_list: 
-                            if player == user.id: return_dict[player] = nickname
+                            if player == user.id:
+                                return_dict[player] = nickname
                             else:
                                 if str(player) not in temp_cache:
                                     if DF.local_checks(player):
@@ -1095,18 +1049,19 @@ class SmallGames(commands.Cog):
                                         except Exception:
                                             p_nickname = _("Anonymous")
                                     temp_cache[str(player)] = p_nickname
-                                else: p_nickname = temp_cache[str(player)]
+                                else:
+                                    p_nickname = temp_cache[str(player)]
                                 return_dict[player] = p_nickname
                         return return_dict, temp_cache
                     
                     def build_game_replay(game:dict):
                         if not game:
-                            embed = discord.Embed(title=_("Game not found"), description=_("The requested game was not found."), color=b_cfg.CustomColors.dark_red)
+                            embed = discord.Embed(title=_("Game not found"), description=_("The requested game was not found."), color=bot_config.CustomColors.dark_red)
                             return embed, None
 
                         # Check if the received dictionary contains "Private" flag
                         if 'private' in game:
-                            embed = discord.Embed(title=_("Game not played by requested user"), description=_("The requested user did not play this game."), color=b_cfg.CustomColors.dark_red)
+                            embed = discord.Embed(title=_("Game not played by requested user"), description=_("The requested user did not play this game."), color=bot_config.CustomColors.dark_red)
                             return embed, None
                         
                         player_list = [game['meta']['players'][x]['user_id'] for x in game['meta']['players']]
@@ -1116,9 +1071,10 @@ class SmallGames(commands.Cog):
                         player_list = [player_list_dict[x] for x in player_list_dict]
                         queue = " -> ".join(player_list)
                         finish_state = game['meta']['state'].split()
-                        embed = discord.Embed(title=_(("Win" if int(finish_state[1]) == user.id else "Loss") + " by guessing" if finish_state[0] == "Finished." else " by timeout"), description=queue, color=b_cfg.CustomColors.cyan)
+                        embed = discord.Embed(title=_(("Win" if int(finish_state[1]) == user.id else "Loss") + " by guessing" if finish_state[0] == "Finished." else " by timeout"), description=queue, color=bot_config.CustomColors.cyan)
                         value = ""
-                        for i in range(0, len(player_list)): value += f"\n{b_cfg.CustomEmojis.empty * 2}{player_list[i]}: {game['meta']['players'][f'player{i+1}']['number']}" + (_(" - ***Winner***") if player_list_id[i] == int(finish_state[1]) else "")
+                        for i in range(0, len(player_list)):
+                            value += f"\n{bot_config.CustomEmojis.empty * 2}{player_list[i]}: {game['meta']['players'][f'player{i+1}']['number']}" + (_(" - ***Winner***") if player_list_id[i] == int(finish_state[1]) else "")
                         embed.add_field(name=_("Players"), value=value)
                         embed.add_field(name=_("Date played"), value=f"<t:{calendar.timegm(game['meta']['datetime_started'].timetuple())}> (<t:{calendar.timegm(game['meta']['datetime_started'].timetuple())}:R>)", inline=False)
                         embed.add_field(name=_("Duration"),value=f"`{pretty_time_delta(game['meta']['duration'])}`", inline=False)
@@ -1139,10 +1095,11 @@ class SmallGames(commands.Cog):
                     recorded_games.reverse()
                     pages_dict = {}
                     
-                    embed_pg1=discord.Embed(title=_("Games archive"), description=_("{}' archive of played **Bulls and Cows** games {}").format(nickname, _('against {mention}').format(mention=arg.mention) if isinstance(arg, discord.Member) else ''), color=b_cfg.CustomColors.cyan)
+                    embed_pg1=discord.Embed(title=_("Games archive"), description=_("{}' archive of played **Bulls and Cows** games {}").format(nickname, _('against {mention}').format(mention=arg.mention) if isinstance(arg, discord.Member) else ''), color=bot_config.CustomColors.cyan)
                     embed_pg1.set_footer(text=_("Page: 1/{total_pages}").format(total_pages=math.ceil(len(recorded_games) / 12) if len(recorded_games) != 0 else 1))
                     def finish_page(embed:discord.Embed, games:list):
-                        if len(games) == 0: embed.add_field(name=_("No games"), value=_("I couldn't find any games "))
+                        if len(games) == 0:
+                            embed.add_field(name=_("No games"), value=_("I couldn't find any games "))
                         temp_cache = {}
                         for game in games:
                             if games.index(game) % 12 == 0 and games.index(game) != 0:
@@ -1151,14 +1108,16 @@ class SmallGames(commands.Cog):
                             player_list = [game[x] for x in game if x in ["user_1", "user_2", "user_3", "user_4"] and game[x] is not None]
                             player_list, temp_cache = create_player_list(player_list, temp_cache)
                             player_queue = " -> ".join(player_list.values())
-                            if len(player_queue) > 20: player_queue = player_queue[0:20]+"..."
+                            if len(player_queue) > 20:
+                                player_queue = player_queue[0:20]+"..."
                             timestamp = game['t1'].replace(tzinfo=pytz.UTC)
                             embed.add_field(name=_("Win") if game['player_won'] == user.id else _("Loss"), value=f"{player_queue} \n`{pretty_date(timestamp)}`\n*id: **{game['id']}***")
                         return embed, games
                     embed_pg1, recorded_games = finish_page(embed_pg1, recorded_games)
-                    pages_dict[f'page_1'] = embed_pg1.to_dict()
+                    pages_dict['page_1'] = embed_pg1.to_dict()
                     bac_replay_view = BacReplayRecordsView(pages_dict, recorded_games, function=finish_page)
                     bac_replay_view.message = await ctx.send(embed=embed_pg1, view=bac_replay_view)
+
 
 
 async def setup(bot):

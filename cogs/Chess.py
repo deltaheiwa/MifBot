@@ -2,7 +2,7 @@ from fileinput import filename
 from typing import Optional, Union
 import discord
 import berserk
-import chessdotcom.aio as chessdotcum_aio  # TODO: Integrate chess.com  https://pypi.org/project/chess.com/
+from random_chess_opening import core as rco
 import chess
 import chess.svg
 from cairosvg import svg2png
@@ -19,14 +19,15 @@ from db_data.mysql_main import (
     JsonOperating as JO,
     LichessTables as LT,
 )
-import creds
-import util.bot_config as bot_config
-from util.bot_functions import *
+import os
+from dotenv import load_dotenv
+import bot_util.bot_config as bot_config
+from bot_util.bot_functions import *
 import traceback
 from discord.ext import commands, tasks
 import schedule
 from urllib.parse import urlparse
-from util.bot_scheduler import Scheduler
+from bot_util.bot_scheduler import Scheduler
 import asyncio
 
 
@@ -41,6 +42,8 @@ stream_handler.setFormatter(console_formatter)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
+load_dotenv("creds/.env")
+token = os.getenv("LI_API_TOKEN")
 """
 async def delete_file(num):
     try:
@@ -521,7 +524,7 @@ class LichessGame:
 
     def get_move_list(self):
         move_list = self.game_info["moves"].split()
-        self.move_count = len(move_list)
+        self.move_count = math.ceil(len(move_list)/2)
         return move_list
 
     def get_opening(self):
@@ -575,7 +578,7 @@ class LichessGame:
     async def get_game_stream(self):
         headers = {
             "Method": "POST",
-            "Authorization": "Bearer " + creds.LI_API_TOKEN,
+            "Authorization": "Bearer " + token,
             "scope": "https://lichess.org/api/",
         }
         if self.tv is True:
@@ -1018,8 +1021,7 @@ class LiTopView(discord.ui.View):
 class Chess(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.token = creds.LI_API_TOKEN
-        self.session = berserk.TokenSession(self.token)
+        self.session = berserk.TokenSession(token)
         self.client = berserk.Client(session=self.session)
         self.chess_scheduler = Scheduler()
 
@@ -1964,6 +1966,7 @@ class Chess(commands.Cog):
                     gettext_=_,
                     user_id=ctx.author.id,
                 )
+                DF.add_command_stats(ctx.author.id)
             except Exception as e:
                 if e.__class__ in [requests.exceptions.HTTPError, berserk.exceptions.ResponseError]:
                     logger.info(f"Game with ID of {_id} not found")
@@ -1974,6 +1977,7 @@ class Chess(commands.Cog):
                     )
                     await fetching_message.edit(content="", embed=embed)
                     del game
+                    DF.add_command_stats(ctx.author.id)
                     return
                 logger.exception("Unknown error occured in lichess game command")
                 embed = discord.Embed(
@@ -1998,6 +2002,52 @@ class Chess(commands.Cog):
                     await self.bot.fetch_user(bot_config.admin_account_ids[0]).send(
                         embed=embed_error
                     )
+    
+    @commands.hybrid_command(name="random-opening", description="A random inspirational opening, to try something new", aliases=["roc", "randomopeningchallenge", "randomopening", "randomopeningchall", "randomopeningch", "randomopeningc"], with_app_command=True)
+    async def randomopening(self, ctx: commands.Context):
+        async with AsyncTranslator(
+            language_code=JO.get_lang_code(ctx.author.id)
+        ) as lang:
+            lang.install()
+            _ = lang.gettext
+
+            opening_cache = rco.get_user_from_cache(ctx.author.id)
+
+            if opening_cache is None:
+                opening_basic_info = rco.generate_opening().split('\t')
+                opening_cache = {
+                    "code": opening_basic_info[0],
+                    "name": opening_basic_info[1],
+                    "moves": opening_basic_info[2]
+                }
+                rco.load_user_to_cache(ctx.author.id, opening_cache)
+            
+            embed = discord.Embed(
+                title=_("Random Opening"),
+                description=_("Try this opening out!"),
+                color=bot_config.CustomColors.cyan,
+            )
+            embed.add_field(
+                name=_("Name"),
+                value=f"**{opening_cache['code']} | {opening_cache['name']}**",
+                inline=False,
+            )
+            embed.add_field(
+                name=_("Moves"),
+                value=f"{opening_cache['moves']}",
+                inline=False,
+            )
+            board = chess.Board()
+            for move in opening_cache['moves'].split(' '):
+                if move[-1] != '.': board.push_san(move.replace('\n', ''))
+            
+            check_sq = board.king(board.turn) if board.is_check() else None
+            discord_file, attachment = board_to_image(board, chess.Move.from_uci(board.peek().uci()), check_sq)
+            embed.set_image(url=f"attachment://{discord_file.filename}")
+            embed.set_footer(text=_("Updates in {in_time}").format(in_time=pretty_time_delta(0, timedelta=(datetimefix.utcnow() + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0) - datetimefix.utcnow())))
+            await ctx.send(embed=embed, file=discord_file)
+            DF.add_command_stats(ctx.author.id)
+
 
 
 async def setup(bot):

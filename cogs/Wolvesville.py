@@ -1,18 +1,27 @@
+import calendar
 from functools import cache
 import discord
 import logging
 import asyncio
+from io import BytesIO
 import json
 from discord.ext import commands
-from datetime import datetime as datetimefix
-import datetime as mainDatetime
-from util.bot_functions import *
+from datetime import datetime as dt, timedelta
+from bot_util.bot_functions import (
+    AsyncTranslator,
+    CustomFormatter,
+    APICaller,
+    pretty_time_delta,
+    pretty_date,
+    percentage_calc,
+    WovApiCall,
+    WolvesvilleFunctions as WovFunc
+)
 from db_data.mysql_main import (
     DatabaseFunctions as DF,
     JsonOperating as JO
 )
-import creds
-import util.bot_config as cfg
+import bot_util.bot_config as cfg
 from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
@@ -31,7 +40,7 @@ formatter = logging.Formatter('%(asctime)s:%(levelname)s --- %(message)s')
 console_formatter = CustomFormatter()
 stream_handler = logging.StreamHandler()
 coloredlogs.install(level='DEBUG', logger=logger)
-file_handler_debug = logging.FileHandler(bot_config.LogFiles.wolvesville_log)
+file_handler_debug = logging.FileHandler(cfg.LogFiles.wolvesville_log)
 file_handler_debug.setFormatter(formatter)
 stream_handler.setFormatter(console_formatter)
 logger.addHandler(file_handler_debug)
@@ -45,9 +54,9 @@ class WovClan(discord.ui.View):
         self.api_caller: APICaller = api_caller
 
     
-    @discord.ui.button(label="", emoji=bot_config.CustomEmojis.rerequest, style=discord.ButtonStyle.gray)
+    @discord.ui.button(label="", emoji=cfg.CustomEmojis.rerequest, style=discord.ButtonStyle.gray)
     async def repeat_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        time_diff = datetimefix.utcnow() - datetimefix.strptime(self.json_data['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ")
+        time_diff = dt.utcnow() - dt.strptime(self.json_data['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ")
         time_diff = time_diff.total_seconds()
         button.disabled = True
         async with AsyncTranslator(JO.get_lang_code(interaction.user.id)) as at:
@@ -90,10 +99,10 @@ class WovClan(discord.ui.View):
                 if members_str == _("\n**...Members...**"): members_str = ""
                 if co_leader_str2 != "":
                     new_embed.add_field(name=_("Members"), value=clan_leader_str+co_leader_str, inline=False)
-                    new_embed.add_field(name=f"{bot_config.CustomEmojis.empty}", value = co_leader_str2+members_str, inline=False)
+                    new_embed.add_field(name=f"{cfg.CustomEmojis.empty}", value = co_leader_str2+members_str, inline=False)
                 elif members_str2 != "":
                     new_embed.add_field(name=_("Members"), value=clan_leader_str+co_leader_str+members_str, inline=False)
-                    new_embed.add_field(name=f"{bot_config.CustomEmojis.empty}", value = members_str2, inline=False)
+                    new_embed.add_field(name=f"{cfg.CustomEmojis.empty}", value = members_str2, inline=False)
                 else: new_embed.add_field(name=_("Members"), value=clan_leader_str+co_leader_str+members_str, inline=False)
                 await interaction.response.edit_message(attachments=[file_thumbnail], embed=new_embed, view=self)
     
@@ -126,8 +135,8 @@ class WovPlayer(discord.ui.View):
             sp_list = []
             graph_sp = []
             for time in old_player_cache[self.json_data['id']]:
-                time_diff = datetimefix.utcnow() - datetimefix.strptime(time, "%Y-%m-%dT%H:%M:%S.%fZ")
-                if time_diff > datetime.timedelta(days=self.days):
+                time_diff = dt.utcnow() - dt.strptime(time, "%Y-%m-%dT%H:%M:%S.%fZ")
+                if time_diff > timedelta(days=self.days):
                     continue
                 current_sp_data = old_player_cache[self.json_data['id']][time]
                 fixed_tp.append(time)
@@ -183,10 +192,10 @@ class WovPlayer(discord.ui.View):
                 amount_of_sp_obj -= 15
             for index in range(len(dates)):
                 ax.text(dates[index], sp_list[index], graph_sp[index], size=sp_size)
-            for reset_date in bot_config.wov_season_resets:
-                if datetimefix.strptime(fixed_tp[0], "%Y-%m-%dT%H:%M:%S.%fZ") < reset_date and datetimefix.strptime(fixed_tp[-1], "%Y-%m-%dT%H:%M:%S.%fZ") > reset_date:
+            for reset_date in cfg.wov_season_resets:
+                if dt.strptime(fixed_tp[0], "%Y-%m-%dT%H:%M:%S.%fZ") < reset_date and dt.strptime(fixed_tp[-1], "%Y-%m-%dT%H:%M:%S.%fZ") > reset_date:
                     plt.axvline(x=reset_date,ymin=0.05, ymax=0.95, color='#DCBB1E', label=self._('Line - season reset'))
-                    plt.legend(loc='upper right', labelcolor=milky_color, fontsize=7, frameon=False, fancybox=False, shadow=False, framealpha=0.0)
+                    plt.legend(loc='upper right' if max(sp_list) != sp_list[-1] else 'lower right', labelcolor=milky_color, fontsize=7, frameon=False, fancybox=False, shadow=False, framealpha=0.0)
             ax.set_facecolor('#1f2736')
             fig.set_facecolor('#080b0f')
             fig.autofmt_xdate()
@@ -201,9 +210,9 @@ class WovPlayer(discord.ui.View):
             await interaction.followup.send(file=attachment)
 
     
-    @discord.ui.button(label="", emoji=bot_config.CustomEmojis.rerequest, style=discord.ButtonStyle.gray)
+    @discord.ui.button(label="", emoji=cfg.CustomEmojis.rerequest, style=discord.ButtonStyle.gray)
     async def repeat_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        time_diff = datetimefix.utcnow() - datetimefix.strptime(self.json_data['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ")
+        time_diff = dt.utcnow() - dt.strptime(self.json_data['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ")
         time_diff = time_diff.total_seconds()
         if time_diff < 3600: # 1 hour
             button.disabled = True
@@ -213,7 +222,7 @@ class WovPlayer(discord.ui.View):
                 _ = at.gettext
                 await interaction.followup.send(content=_("Can't update information so frequently. Try again in **{again_in}**").format(again_in=pretty_time_delta(3600-time_diff)))
         else:
-            history_caching(self.json_data)
+            WovFunc.history_caching(self.json_data)
             json_data_future = await self.api_caller.add_to_queue(WovApiCall.get_user_by_id, self.json_data['id'])
             self.json_data = await json_data_future
             DF.json_caching("user", self.json_data)
@@ -236,7 +245,7 @@ class AvatarSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         if self.embeds['All_avatars'] is None:
             for item in self.embed_names:
-                self.embeds[item] = {"embed":discord.Embed(title=re.sub("_", " ", item), description="", color=bot_config.CustomColors.cyan), "attachment": self.attachments[self.embed_names.index(item)]}
+                self.embeds[item] = {"embed":discord.Embed(title=re.sub("_", " ", item), description="", color=cfg.CustomColors.cyan), "attachment": self.attachments[self.embed_names.index(item)]}
         with BytesIO() as im_bin:
             key = re.sub("\s", "_", self.values[0])
             self.embeds[key]['attachment'].save(im_bin, "PNG")
@@ -305,22 +314,21 @@ class Wolvesville(commands.Cog):
             translator.install()
             _ = translator.gettext
             if clan_name is None:
-                embedErr = discord.Embed(title=_("Error"), description=_("No clan name specified. Correct syntax: `.wov-clan {clan name}`"), color=bot_config.CustomColors.red)
+                embedErr = discord.Embed(title=_("Error"), description=_("No clan name specified. Correct syntax: `.wov-clan {clan name}`"), color=cfg.CustomColors.red)
                 await ctx.send(embed=embedErr)
                 return
             clan_name = surrogates.encode(clan_name)
             logger_clan_name = clan_name.encode("ascii", "ignore")
             logger_clan_name = logger_clan_name.decode()
             main_message = None
-            if DF.local_checks(ctx.message.author.id):
-                DF.add_command_stats(ctx.message.author.id)
+            DF.add_command_stats(ctx.message.author.id)
             if DF.cache_check("clan", "name", clan_name) is False:
                 logger.info(f"Couldn't find \"{logger_clan_name}\" in cache. Making an API call.")
                 clan_name_search = re.sub("\s", "%20", clan_name)
                 clan_dict = await self.api_caller.add_to_queue(WovApiCall.get_clan_by_name, clan_name_search)
                 clan_dict = await clan_dict
                 if len(clan_dict) == 0 or clan_dict is None:
-                    embedErr = discord.Embed(title=_("Error"), description=_("Couldn't find any clan with that name."), color=bot_config.CustomColors.red)
+                    embedErr = discord.Embed(title=_("Error"), description=_("Couldn't find any clan with that name."), color=cfg.CustomColors.red)
                     await ctx.send(embed=embedErr)
                     logger.info(f"Couldn't find \"{logger_clan_name}\" using API")
                     return
@@ -330,7 +338,7 @@ class Wolvesville(commands.Cog):
                 # // cl_names = cl_names.decode()
                 logger.debug(f"(Length - {len(clan_dict)}.)")
                 if len(clan_dict) > 1:
-                    choose_embed = discord.Embed(title=_("Clans found"), description=_("use select menu in order to get information on the clan you need"), color=bot_config.CustomColors.cyan)
+                    choose_embed = discord.Embed(title=_("Clans found"), description=_("use select menu in order to get information on the clan you need"), color=cfg.CustomColors.cyan)
                     select_options = []
                     for clan in clan_dict:
                         clan_desc = clan['description']
@@ -359,7 +367,7 @@ class Wolvesville(commands.Cog):
                     view_chose.message:discord.Message = await ctx.send(embed=choose_embed, view=view_chose)
                     
                     if await view_chose.wait() is True:
-                        embed_err = discord.Embed(title=_("Timeout error"), description=_("No clan number received"), color = bot_config.colors['red'])
+                        embed_err = discord.Embed(title=_("Timeout error"), description=_("No clan number received"), color = cfg.colors['red'])
                         await ctx.send(embed=embed_err)
                         logger.info("\"Found Clans\" asyncio.TimeoutError:Exiting command function")
                         return
@@ -370,7 +378,7 @@ class Wolvesville(commands.Cog):
                     logger.info(f"They chose {logger_clan_name}")
                     description = dict_clan['description']
                     DF.json_caching("clan",dict_clan)
-                    time_cached = datetimefix.utcnow()
+                    time_cached = dt.utcnow()
                     iso = time_cached.isoformat() + "Z"
                     dict_clan['caching_data'] = {}
                     dict_clan['caching_data']['time_cached'] = str(iso)
@@ -378,7 +386,7 @@ class Wolvesville(commands.Cog):
                     dict_clan = clan_dict[0]
                     description = dict_clan['description']
                     DF.json_caching("clan", dict_clan)
-                    time_cached = datetimefix.utcnow()
+                    time_cached = dt.utcnow()
                     iso = time_cached.isoformat() + "Z"
                     dict_clan['caching_data'] = {}
                     dict_clan['caching_data']['time_cached'] = str(iso)
@@ -395,8 +403,8 @@ class Wolvesville(commands.Cog):
                 c_tag = surrogates.decode(c_tag)
                 clan_desc = surrogates.encode(description)
                 clan_desc = surrogates.decode(clan_desc)
-                try: timestamp = timestamp = datetimefix.strptime(dict_clan['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ") 
-                except: timestamp = datetimefix.utcnow()
+                try: timestamp = timestamp = dt.strptime(dict_clan['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ") 
+                except: timestamp = dt.utcnow()
                 timestamp = timestamp.replace(tzinfo=pytz.UTC)
                 embed_clan = discord.Embed(title=f"`{c_tag}` | {clan_name}", description=_("General clan information about \"{clan_name}\" on Wolvesville").format(clan_name=clan_name), color=discord.Color.from_str(dict_clan['iconColor']), timestamp=timestamp)
                 file_thumbnail = discord.File("Images/wov_logo.png", filename="wov_logo.png")
@@ -413,7 +421,7 @@ class Wolvesville(commands.Cog):
                 embed_clan.add_field(name=_("Language"), value=f":flag_{dict_clan['language'].lower()}:")
                 embed_clan.add_field(name=_("Member count"), value=f"**{dict_clan['memberCount']}/50**")
                 try:
-                    creationDate = f'<t:{calendar.timegm(datetimefix.strptime(dict_clan["creationTime"], "%Y-%m-%dT%H:%M:%S.%fZ").timetuple())}:D>'
+                    creationDate = f'<t:{calendar.timegm(dt.strptime(dict_clan["creationTime"], "%Y-%m-%dT%H:%M:%S.%fZ").timetuple())}:D>'
                 except KeyError:
                     creationDate = _("August 3, 2018 or before")
                 embed_clan.add_field(name=_("Creation date"), value=f"{creationDate}")
@@ -424,7 +432,7 @@ class Wolvesville(commands.Cog):
                 return (embed_clan, file_thumbnail)
             
             first_embed, file_thumbnail = embed_creation(dict_clan, description)
-            first_embed.add_field(name=_("Members"), value=_("*loading...* {emoji}").format(emoji=bot_config.CustomEmojis.loading), inline=False)
+            first_embed.add_field(name=_("Members"), value=_("*loading...* {emoji}").format(emoji=cfg.CustomEmojis.loading), inline=False)
             
             if main_message is not None: await main_message.edit(attachments=[file_thumbnail], embed=first_embed)
             else: main_message = await ctx.send(file=file_thumbnail, embed=first_embed)
@@ -461,10 +469,10 @@ class Wolvesville(commands.Cog):
             if members_str == _("\n**...Members...**"): members_str = ""
             if co_leader_str2 != "":
                 first_embed.add_field(name=_("Members"), value=clan_leader_str+co_leader_str, inline=False)
-                first_embed.add_field(name=f"{bot_config.CustomEmojis.empty}", value = co_leader_str2+members_str, inline=False)
+                first_embed.add_field(name=f"{cfg.CustomEmojis.empty}", value = co_leader_str2+members_str, inline=False)
             elif members_str2 != "":
                 first_embed.add_field(name=_("Members"), value=clan_leader_str+co_leader_str+members_str, inline=False)
-                first_embed.add_field(name=f"{bot_config.CustomEmojis.empty}", value = members_str2, inline=False)
+                first_embed.add_field(name=f"{cfg.CustomEmojis.empty}", value = members_str2, inline=False)
             else: first_embed.add_field(name=_("Members"), value=clan_leader_str+co_leader_str+members_str, inline=False)
             view = WovClan(clan_json_data=dict_clan, embed_func=embed_creation, api_caller=self.api_caller)
             view.message = await main_message.edit(embed=first_embed, view=view)
@@ -476,11 +484,11 @@ class Wolvesville(commands.Cog):
             _ = at.gettext
             previous_username = None
             if username is None:
-                embedErr = discord.Embed(title=_("Error"), description=_("No username provided. Correct syntax: `.wov-player {username}`"), color=bot_config.CustomColors.red)
+                embedErr = discord.Embed(title=_("Error"), description=_("No username provided. Correct syntax: `.wov-player {username}`"), color=cfg.CustomColors.red)
                 await ctx.send(embed=embedErr)
                 return
             elif len(username) < 3:
-                embedErr = discord.Embed(title=_("Error"), description=_("Username is too short. At least 3 characters required"), color=bot_config.CustomColors.red)
+                embedErr = discord.Embed(title=_("Error"), description=_("Username is too short. At least 3 characters required"), color=cfg.CustomColors.red)
                 await ctx.send(embed=embedErr)
                 return
             cache_cck = DF.cache_check("user", "username", username)
@@ -491,7 +499,7 @@ class Wolvesville(commands.Cog):
                 if player_dict is None:
                     player_dict = DF.cache_check("user", "previous_username", username)
                     if not player_dict:
-                        embedErr = discord.Embed(title=_("Error"), description=_("Couldn't find any user with that username. *Maybe they changed it?*"), color=bot_config.CustomColors.red)
+                        embedErr = discord.Embed(title=_("Error"), description=_("Couldn't find any user with that username. *Maybe they changed it?*"), color=cfg.CustomColors.red)
                         await ctx.send(embed=embedErr)
                         return
                     player_dict = JO.get_wov_player_by_prev_username(username)
@@ -503,29 +511,28 @@ class Wolvesville(commands.Cog):
             else:
                 player_dict = JO.get_wov_player_by_username(username)
                 player_dict, bio_first, previous_username = player_dict[1], player_dict[0], player_dict[2]
-            if (datetimefix.utcnow() - datetimefix.strptime(player_dict['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ")).days > 30: 
-                history_caching(player_dict)
+            if (dt.utcnow() - dt.strptime(player_dict['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ")).days > 30: 
+                WovFunc.history_caching(player_dict)
                 player_dict = await self.api_caller.add_to_queue(WovApiCall.get_user_by_id, player_dict['id'])
                 player_dict = await player_dict
                 bio_first = player_dict['personalMessage'] if 'personalMessage' in player_dict else '*No personal message found*'
                 DF.json_caching("user", player_dict)
-            if DF.local_checks(ctx.message.author.id):
-                DF.add_command_stats(ctx.message.author.id)
+            DF.add_command_stats(ctx.message.author.id)
             if arg in ["avatars", "avatar"]:
                 select_options, embed_names, attachments, avatar_functs, av_urls = [], [], [], [], []
-                avatar_embed = discord.Embed(title=_("All avatars"), description="", color=bot_config.CustomColors.cyan)
+                avatar_embed = discord.Embed(title=_("All avatars"), description="", color=cfg.CustomColors.cyan)
                 avatar_embed.add_field(name=_("Rendering"), value=_("loading... {emoji}").format(emoji=cfg.CustomEmojis.loading))
                 main_message = await ctx.send(embed=avatar_embed)
                 for avatar in player_dict['avatars']:
                     if avatar['url'] in av_urls: 
                         av_urls.append(avatar['url']) 
                         continue
-                    avatar_functs.append(avatar_rendering(image_URL=avatar['url'], rank=False))
+                    avatar_functs.append(WovFunc.avatar_rendering(image_URL=avatar['url'], rank=False))
                     av_urls.append(avatar['url'])
-                time_before_rendering = datetimefix.now()
+                time_before_rendering = dt.now()
                 attachments = await asyncio.gather(*avatar_functs)
-                print(datetimefix.now()-time_before_rendering)
-                all_avatars_file = await all_avatars_rendering(attachments,av_urls)
+                print(dt.now()-time_before_rendering)
+                all_avatars_file = await WovFunc.all_avatars_rendering(attachments,av_urls)
                 attachments.insert(0, all_avatars_file)
                 with BytesIO() as im_bin:
                     all_avatars_file.save(im_bin, "PNG")
@@ -551,15 +558,15 @@ class Wolvesville(commands.Cog):
                                 'DND': [":red_circle:", "Do not disturb"],
                                 'OFFLINE': [":black_circle:", "Invisible"]}
                     try:
-                        thumbnail = await avatar_rendering(player_data['equippedAvatar']['url'], player_data['level'])
+                        thumbnail = await WovFunc.avatar_rendering(player_data['equippedAvatar']['url'], player_data['level'])
                     except KeyError:
-                        history_caching(player_data)
+                        WovFunc.history_caching(player_data)
                         player_data = await self.api_caller.add_to_queue(WovApiCall.get_user_by_name, username)
                         DF.json_caching("user", player_data)
-                        thumbnail = await avatar_rendering(player_data['equippedAvatar']['url'], player_data['level'])
+                        thumbnail = await WovFunc.avatar_rendering(player_data['equippedAvatar']['url'], player_data['level'])
                     try: 
-                        timestamp = datetimefix.strptime(player_data['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ") 
-                    except: timestamp = datetimefix.utcnow()
+                        timestamp = dt.strptime(player_data['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ") 
+                    except: timestamp = dt.utcnow()
                     timestamp = timestamp.replace(tzinfo=pytz.UTC)
                     embed_color = player_data['profileIconColor']
                     embedPlayer = discord.Embed(title=f"{player_data['username']}", description=f"Information I retrieved about {player_data['username']} on Wolvesville", color=discord.Color.from_str(embed_color),timestamp=timestamp)
@@ -577,26 +584,26 @@ class Wolvesville(commands.Cog):
                     embedPlayer.add_field(name=_("Personal Message"), value=bio, inline=False)
                     embedPlayer.add_field(name=_("Level"), value=f"**{player_data['level'] if player_data['level'] > 0 else '?'}**") 
                     embedPlayer.add_field(name=_("Status"), value=f"{statuses[player_data['status']][0]} **{statuses[player_data['status']][1]}**")
-                    LO_time_diff = datetimefix.utcnow() - datetimefix.strptime(player_data['lastOnline'], "%Y-%m-%dT%H:%M:%S.%fZ")
+                    LO_time_diff = dt.utcnow() - dt.strptime(player_data['lastOnline'], "%Y-%m-%dT%H:%M:%S.%fZ")
                     LO_time_diff = LO_time_diff.total_seconds()
                     if LO_time_diff < 420:
                         lastOnlineFlag = _("Player is online")
                     else: lastOnlineFlag = pretty_date(player_data['lastOnline'])
                     embedPlayer.add_field(name=_("Last online"), value=f"{lastOnlineFlag}")
                     try:
-                        creationDate = f'<t:{calendar.timegm(datetimefix.strptime(player_data["creationTime"], "%Y-%m-%dT%H:%M:%S.%fZ").timetuple())}:D>'
+                        creationDate = f'<t:{calendar.timegm(dt.strptime(player_data["creationTime"], "%Y-%m-%dT%H:%M:%S.%fZ").timetuple())}:D>'
                     except KeyError:
                         creationDate = _("*Date is private*")
                     embedPlayer.add_field(name=_("Creation date"), value=f"{creationDate}")
                     embedPlayer.add_field(name=_("Roses"), value=_("Roses received: **{}** {}\nRoses sent: **{}** {} \nDiff: **{}**").format(
                         player_data.get('receivedRosesCount', '?'),
-                        bot_config.CustomEmojis.single_rose,
+                        cfg.CustomEmojis.single_rose,
                         player_data.get('sentRosesCount', '?'),
-                        bot_config.CustomEmojis.single_rose,
+                        cfg.CustomEmojis.single_rose,
                         player_data['receivedRosesCount'] - player_data['sentRosesCount'] if 'sentRosesCount' in player_data and 'receivedRosesCount' in player_data else '?'
                     ))
                     embedPlayer.add_field(name=_("Honor"), value=_("*Ask developers to update the API*"), inline=False)
-                    # embedPlayer.add_field(name=f"{bot_config.CustomEmojis.empty}", value=f"{bot_config.CustomEmojis.empty}", inline=False)
+                    # embedPlayer.add_field(name=f"{cfg.CustomEmojis.empty}", value=f"{cfg.CustomEmojis.empty}", inline=False)
                     ranked_keys = ["rankedSeasonPlayedCount", "rankedSeasonSkill", "rankedSeasonMaxSkill", "rankedSeasonBestRank"]
                     private_ranked = False
                     for item in ranked_keys:
@@ -639,7 +646,7 @@ class Wolvesville(commands.Cog):
                         if 'totalPlayTimeInMinutes' not in player_data['gameStats'] or player_data['gameStats']['totalPlayTimeInMinutes'] < 0:
                             total_playtime = _("*Data is private*")
                         else:
-                            total_playtime = datetime.timedelta(minutes=player_data['gameStats']['totalPlayTimeInMinutes'])
+                            total_playtime = timedelta(minutes=player_data['gameStats']['totalPlayTimeInMinutes'])
                             total_playtime = f"{round(total_playtime.total_seconds()/3600, 2)}h"
                         general_stats = _("Total games played: **{}**\nTotal wins: **{} ({:.2f}%)**\nTotal defeats: **{} ({:.2f}%)**\nTotal ties: **{} ({:.2f}%)**\nFlee count: **{} ({:.2f}%)**\nTotal playtime: **{}**").format(
                             all_games - player_data['gameStats']['exitGameBySuicideCount'],
@@ -694,7 +701,7 @@ class Wolvesville(commands.Cog):
                         else:
                             clan_dict = JO.get_wov_clan_by_id(player_data['clanId'])
                             clan_desc, clan_dict = clan_dict[0], clan_dict[1]
-                            if (datetimefix.utcnow() - datetimefix.strptime(clan_dict['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ")).days > 30: 
+                            if (dt.utcnow() - dt.strptime(clan_dict['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ")).days > 30: 
                                 clan_dict = await WovApiCall.get_clan_by_id(player_data['clanId'])
                                 DF.json_caching("clan", clan_dict)
                                 clan_desc = clan_dict['description']

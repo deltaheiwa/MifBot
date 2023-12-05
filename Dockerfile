@@ -1,5 +1,5 @@
 FROM ubuntu:latest
-FROM python:3.11.2-slim-buster
+FROM python:3.11.5-slim-buster
 
 ENV POETRY_VERSION=1.2.2
 

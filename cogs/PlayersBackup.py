@@ -5,10 +5,10 @@ import json
 import asyncpg
 import shutil
 from discord.ext import commands, tasks
-from util.bot_functions import *
+from bot_util.bot_functions import *
 
 class PlayersBackup(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.index = 0
         self.bot = bot
         self.data = []
@@ -27,7 +27,11 @@ class PlayersBackup(commands.Cog):
         channel_to_upload_to = self.bot.get_channel(928035142482681886)
         try:
             shutil.make_archive("databases", 'zip', 'db_data/databases/')
-            await channel_to_upload_to.send(file=discord.File("databases.zip"))
+            files_to_upload = [discord.File("databases.zip")]
+            if os.path.exists("vg_ext"):
+                shutil.make_archive("vg_ext_databases", 'zip', 'vg_ext/database/')
+                files_to_upload.append(discord.File("vg_ext_databases.zip"))
+            await channel_to_upload_to.send(files=files_to_upload)
             print("Database file upload success")
         except Exception as e:
             print(f"Upload .zip package failed: {e}")

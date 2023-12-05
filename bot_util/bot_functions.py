@@ -1,5 +1,30 @@
 import logging
+import subprocess
 from typing import Any, Literal, Union, Callable
+import gettext
+import chess
+import chess.svg
+from cairosvg import svg2png
+import asyncio
+import aiohttp
+import datetime
+import json
+import math
+import random
+import re
+import os
+import coloredlogs
+from datetime import datetime as datetimefix, timedelta
+from io import BytesIO
+from pathlib import Path
+import calendar
+import discord
+import requests
+from discord.ext import commands
+from PIL import Image, ImageDraw, ImageFont
+import time
+import os
+from dotenv import load_dotenv
 
 
 class CustomFormatter(logging.Formatter):
@@ -25,6 +50,20 @@ class CustomFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
 
+class AsyncTranslator():
+    def __init__(self, language_code):
+        if language_code is None:
+            language_code = "en"
+        self.language_code = language_code
+
+    async def __aenter__(self):
+        lang = gettext.translation(
+            "mifbot2", localedir=os.path.abspath('./locales'), languages=[self.language_code], fallback=True
+        )
+        return lang
+
+    async def __aexit__(self, exc_type, exc, tb):
+        del self
 
 class ProgressBar:
     """
@@ -49,7 +88,7 @@ class ProgressBar:
         decimals=1,
         length=100,
         fill="█",
-        printEnd="\r",
+        print_end="\r",
     ):
         self.iteration = iteration
         self.total = total
@@ -58,7 +97,7 @@ class ProgressBar:
         self.decimals = decimals
         self.length = length
         self.fill = fill
-        self.printEnd = printEnd
+        self.print_end = print_end
         self.percent = ("{0:." + str(decimals) + "f}").format(
             100 * (iteration / float(total))
         )
@@ -90,38 +129,10 @@ class ProgressBar:
         return self.bar_string
 
 
-import asyncio
-import aiohttp
-import datetime
-import json
-import math
-import random
-import re as re
-import os
-import traceback
-import coloredlogs
-from datetime import datetime as datetimefix, timedelta
-from io import BytesIO
-from locale import normalize
-from pathlib import Path
-import calendar
-import colorama as cl
-import discord
-import orm
-import pymysql
-import pymysql.cursors
-import requests
-import sqlalchemy as sa
-from discord.ext import commands
-from PIL import Image, ImageChops, ImageDraw, ImageFont
-import time
-import creds
-from functools import wraps
 from db_data import database_main, mysql_main
-import util.bot_config as bot_config
+import bot_util.bot_config as bot_config
+from bot_util.bot_exceptions import NotAuthorizedError
 from functools import lru_cache
-import gc
-import gettext
 
 
 formatter = logging.Formatter("%(asctime)s:%(levelname)s --- %(message)s")
@@ -131,6 +142,7 @@ file_handler = logging.FileHandler(bot_config.LogFiles.functions_log)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
+load_dotenv('creds/.env')
 
 class bcolors:
     HEADER = "\033[95m"
@@ -161,12 +173,65 @@ async def determine_prefix(client, message):
         return prefix
     except Exception as e:
         logger.error(f"Error in determine_prefix: {e}")
+        await client.telegram_bot._send_automatic_exception(e, func=determine_prefix, line=e.__traceback__.tb_lineno, extra=f"Message: {message.content}")
         return "."
 
-async def init_bot(bot):
-    if bot_config.launch_variables['rewrite_userdata']:
-        await mysql_main.DatabaseFunctions.iterate_userdata("json_stats")
-        bot_config.launch_variables['rewrite_userdata'] = False
+class ConfigFunctions:
+    @classmethod
+    def add_telegram_chat(cls, chat_id: int):
+        try:
+            if chat_id not in bot_config.telegram_chat_id:
+                bot_config.telegram_chat_id.append(chat_id)
+                with open("bot_config_perma.json", "r") as f:
+                    json_file = json.load(f)
+                json_file["telegram_chat_id"] = bot_config.telegram_chat_id
+                with open("bot_config_perma.json", "w") as f:
+                    json.dump(json_file, f)
+                logger.info(f"Chat id {chat_id} added")
+                return True
+            else:
+                return False
+        except Exception as e:
+            logger.exception(f"Error in add_telegram_chat")
+            return False
+    
+    @classmethod
+    def remove_telegram_chat(cls, chat_id: int):
+        try:
+            if chat_id in bot_config.telegram_chat_id:
+                bot_config.telegram_chat_id.remove(chat_id)
+                with open("bot_config_perma.json", "r") as f:
+                    json_file = json.load(f)
+                json_file["telegram_chat_id"] = bot_config.telegram_chat_id
+                with open("bot_config_perma.json", "w") as f:
+                    json.dump(json_file, f)
+                logger.info(f"Chat id {chat_id} removed")
+                return True
+            else:
+                return False
+        except Exception as e:
+            logger.exception(f"Error in remove_telegram_chat")
+            return False
+
+def dev_command():
+    def predicate(ctx):
+        if ctx.message.author.id not in bot_config.admin_account_ids:
+            raise NotAuthorizedError()
+        return True
+    return commands.check(predicate)
+
+def get_directory_structure(startpath='.'):
+    excluded_dirs = {'.git', 'node_modules', '.mypy_cache', '.idea', '__pycache__', '.ruff_cache'}
+    structure = ''
+    for root, dirs, files in os.walk(startpath):
+        dirs[:] = [d for d in dirs if d not in excluded_dirs]  # Exclude specified directories
+        level = root.replace(startpath, '').count(os.sep)
+        indent = ' ' * 4 * level
+        structure += f'{indent}{os.path.basename(root)}/\n'
+        subindent = ' ' * 4 * (level + 1)
+        for f in files:
+            structure += f'{subindent}{f}\n'
+    return structure
 
 
 baseboard_map = {
@@ -217,30 +282,21 @@ board_trans = str.maketrans(
     "".join(baseboard_map.keys()), "".join(baseboard_map.values())
 )
 
-# engine_db = None
-# def run_db():
-#     try:
-#         global engine_db
-#         engine_db = sa.create_engine(f"mysql+pymysql://{creds.user}:{creds.password}@{creds.host}:3306/{creds.db_name}")
-#         print("success")
-#     except Exception as e:
-#         print(traceback.format_exc())
-
-
-class AsyncTranslator(object):
-    def __init__(self, language_code):
-        if language_code is None:
-            language_code = "en"
-        self.language_code = language_code
-
-    async def __aenter__(self):
-        lang = gettext.translation(
-            "mifbot2", localedir=os.path.abspath('./locales'), languages=[self.language_code], fallback=True
+def board_to_image(board: chess.Board, lastmove: chess.Move = None, check_square: chess.Square = None):
+    with BytesIO() as image_binary:
+        board_svg = chess.svg.board(
+            board=board,
+            size=600,
+            lastmove=lastmove,
+            check=check_square,
+            orientation=chess.WHITE
         )
-        return lang
-
-    async def __aexit__(self, exc_type, exc, tb):
-        del self
+        bytes_image = svg2png(bytestring=board_svg, write_to=image_binary)
+        image_binary.seek(0)
+        board_png_image = Image.open(fp=image_binary)
+        image_binary.seek(0)
+        attachment_board = discord.File(fp=image_binary, filename="board.png")
+        return attachment_board, board_png_image
 
 
 def chess_pieces_visualizator(symbol):
@@ -580,7 +636,7 @@ class MembersOrRoles(commands.Converter):
 
 
 class WovApiCall:
-    headers = {"Authorization": f"Bot {creds.WOV_API_TOKEN}"}
+    headers = {"Authorization": f"Bot {os.getenv('WOV_API_TOKEN')}"}
     api_url = "https://api.wolvesville.com/"
 
     @classmethod
@@ -663,14 +719,14 @@ class WovApiCall:
                     return await response.json()
                 else:
                     logger.error(
-                        f"Wov Shop API call failed with status code {response.status}."
+                        "Wov Shop API call failed with status code %s.".format(response.status)
                     )
                     return None
 
 
 class LichessApiCall:
     lichess_url = "https://lichess.org/api/"
-    headers = {"Authorization": f"Bearer {creds.LI_API_TOKEN}"}
+    headers = {"Authorization": f"Bearer {os.getenv('LI_API_TOKEN')}"}
 
     @classmethod
     def get_user_performance(cls, username: str, perf_type: str):
@@ -794,7 +850,7 @@ async def channel_perms_change(
         view_channel=perms_change,
     )
 
-
+'''
 def vg_check(user: discord.Member, server_id: int):
     try:
         connection = pymysql.connect(
@@ -846,18 +902,7 @@ def append_village_game(user: discord.Member, server_id: int):
         print(traceback.print_exception(e))
         print("Connection refused...")
         print(e)
-
-def history_caching(json_data):
-    with open(Path("Wov Cache", "old_player_cache.json"), "r") as js_f:
-        cache_file = json.load(js_f)
-
-    if json_data["id"] not in cache_file:
-        cache_file[json_data["id"]] = {}
-    cache_file[json_data["id"]][json_data["caching_data"]["time_cached"]] = json_data['rankedSeasonSkill'] if 'rankedSeasonSkill' in json_data else None
-
-    with open(Path("Wov Cache", "old_player_cache.json"), "w") as js_f:
-        json.dump(cache_file, js_f, indent=4)
-
+'''
 def level_rank(level: int) -> int | str:
     if level < 0: return 'no'
     if level < 420:
@@ -902,165 +947,180 @@ def round_edges(im, radius):
     im.putalpha(alpha)
     return im
 
-async def avatar_rendering(image_URL: str, level: int = 0, rank: bool = True):
-    """
-    This one is fked up
-    """
-    av_bg = Image.open(Path("Images", "wolvesville_small_night_AVATAR.png")).convert(
-        "RGBA"
-    )
-    # urllib.request.urlretrieve(image_URL)
-    url_response = requests.get(image_URL)
-    avatar = Image.open(BytesIO(url_response.content)).convert("RGBA")
-    lvlfont = ImageFont.truetype("Fonts/OpenSans-Bold.ttf", 12)
-    one_ts_lvl_font = ImageFont.truetype("Fonts/OpenSans-Bold.ttf", 10)
-    width_bg, height_bg = av_bg.size
-    width_av, height_av = avatar.size
-    # left, upper, right, lower
-    box = []
-    color_bg = Image.new(mode="RGBA", size=(width_bg, height_bg), color=(78, 96, 120))
-    if width_av > width_bg:
-        diff = width_av - width_bg
-        box.append(diff / 2)
-        box.append(width_av - diff / 2)
-    else:
-        box.append(0)
-        box.append(width_av)
-    if height_av > height_bg:
-        diff = height_av - height_bg
-        box.append(height_av - diff)
-        box.insert(1, 0)
-    else:
-        box.append(height_av)
-        box.insert(1, 0)
-    cropped_avatar = avatar.crop(tuple(box))
-    ca_width, ca_height = cropped_avatar.size
-    insert_box = [
-        math.floor((width_bg - ca_width) / 2),
-        height_bg - ca_height,
-        width_bg - math.floor((width_bg - ca_width) / 2),
-        height_bg,
-    ]
-    if (
-        insert_box[2] - insert_box[0] < ca_width
-        or insert_box[2] > ca_width
-        and insert_box[0] == 0
-    ):
-        insert_box[0] += 1
-    elif insert_box[2] - insert_box[0] > ca_width:
-        insert_box[2] -= 1
-    av_bg.paste(cropped_avatar, tuple(insert_box), cropped_avatar)
-    color_bg.paste(av_bg, (0, 0), av_bg)
-    if rank is True:
-        rank_icon = Image.open(
-            Path("Images/ranks", f"rank_{level_rank(level)}.png")
-        ).convert("RGBA")
-        rank_width, rank_height = rank_icon.size
-        resized_dimensions = (int(rank_width * 0.25), int(rank_height * 0.25))
-        resized_rank = rank_icon.resize(resized_dimensions)
-        draw = ImageDraw.Draw(resized_rank)
-        if int(level) < 0:
-            pass
-        elif int(level) < 10:
-            draw.text(
-                (15, 10),
-                text=str(level),
-                font=lvlfont,
-                fill="white",
-                stroke_width=1,
-                stroke_fill=(214, 214, 214),
-            )
-        elif int(level) >= 10 and int(level) < 100:
-            draw.text(
-                (11, 10),
-                text=str(level),
-                font=lvlfont,
-                fill="white",
-                stroke_width=1,
-                stroke_fill=(214, 214, 214),
-            )
-        elif int(level) >= 100 and int(level) < 1000:
-            draw.text(
-                (9, 10),
-                text=str(level),
-                font=lvlfont,
-                fill="white",
-                stroke_width=1,
-                stroke_fill=(214, 214, 214),
-            )
-        elif int(level) >= 1000 and int(level) < 10000:
-            draw.text(
-                (7, 11),
-                text=str(level),
-                font=one_ts_lvl_font,
-                fill="white",
-                stroke_width=1,
-                stroke_fill=(214, 214, 214),
-            )
+class WolvesvilleFunctions:
+    @staticmethod
+    def history_caching(json_data):
+        with open(Path("Wov Cache", "old_player_cache.json"), "r") as js_f:
+            cache_file = json.load(js_f)
+
+        if json_data["id"] not in cache_file:
+            cache_file[json_data["id"]] = {}
+        cache_file[json_data["id"]][json_data["caching_data"]["time_cached"]] = json_data['rankedSeasonSkill'] if 'rankedSeasonSkill' in json_data else None
+
+        with open(Path("Wov Cache", "old_player_cache.json"), "w") as js_f:
+            json.dump(cache_file, js_f, indent=4)
+
+    @staticmethod
+    async def avatar_rendering(image_URL: str, level: int = 0, rank: bool = True):
+        """
+        This one is fked up
+        """
+        av_bg = Image.open(Path("Images", "wolvesville_small_night_AVATAR.png")).convert(
+            "RGBA"
+        )
+        # urllib.request.urlretrieve(image_URL)
+        url_response = requests.get(image_URL)
+        avatar = Image.open(BytesIO(url_response.content)).convert("RGBA")
+        lvlfont = ImageFont.truetype("Fonts/OpenSans-Bold.ttf", 12)
+        one_ts_lvl_font = ImageFont.truetype("Fonts/OpenSans-Bold.ttf", 10)
+        width_bg, height_bg = av_bg.size
+        width_av, height_av = avatar.size
+        # left, upper, right, lower
+        box = []
+        color_bg = Image.new(mode="RGBA", size=(width_bg, height_bg), color=(78, 96, 120))
+        if width_av > width_bg:
+            diff = width_av - width_bg
+            box.append(diff / 2)
+            box.append(width_av - diff / 2)
         else:
-            draw.text((5, 11), text=str(level), font=one_ts_lvl_font, fill="white")
-        color_bg.paste(resized_rank, (100, 10), resized_rank)
-        rank_icon.close()
-    color_bg = round_edges(color_bg, 15)
-    av_bg.close(), avatar.close()  # type: ignore
+            box.append(0)
+            box.append(width_av)
+        if height_av > height_bg:
+            diff = height_av - height_bg
+            box.append(height_av - diff)
+            box.insert(1, 0)
+        else:
+            box.append(height_av)
+            box.insert(1, 0)
+        cropped_avatar = avatar.crop(tuple(box))
+        ca_width, ca_height = cropped_avatar.size
+        insert_box = [
+            math.floor((width_bg - ca_width) / 2),
+            height_bg - ca_height,
+            width_bg - math.floor((width_bg - ca_width) / 2),
+            height_bg,
+        ]
+        if (
+            insert_box[2] - insert_box[0] < ca_width
+            or insert_box[2] > ca_width
+            and insert_box[0] == 0
+        ):
+            insert_box[0] += 1
+        elif insert_box[2] - insert_box[0] > ca_width:
+            insert_box[2] -= 1
+        av_bg.paste(cropped_avatar, tuple(insert_box), cropped_avatar)
+        color_bg.paste(av_bg, (0, 0), av_bg)
+        if rank is True:
+            rank_icon = Image.open(
+                Path("Images/ranks", f"rank_{level_rank(level)}.png")
+            ).convert("RGBA")
+            rank_width, rank_height = rank_icon.size
+            resized_dimensions = (int(rank_width * 0.25), int(rank_height * 0.25))
+            resized_rank = rank_icon.resize(resized_dimensions)
+            draw = ImageDraw.Draw(resized_rank)
+            if int(level) < 0:
+                pass
+            elif int(level) < 10:
+                draw.text(
+                    (15, 10),
+                    text=str(level),
+                    font=lvlfont,
+                    fill="white",
+                    stroke_width=1,
+                    stroke_fill=(214, 214, 214),
+                )
+            elif int(level) >= 10 and int(level) < 100:
+                draw.text(
+                    (11, 10),
+                    text=str(level),
+                    font=lvlfont,
+                    fill="white",
+                    stroke_width=1,
+                    stroke_fill=(214, 214, 214),
+                )
+            elif int(level) >= 100 and int(level) < 1000:
+                draw.text(
+                    (9, 10),
+                    text=str(level),
+                    font=lvlfont,
+                    fill="white",
+                    stroke_width=1,
+                    stroke_fill=(214, 214, 214),
+                )
+            elif int(level) >= 1000 and int(level) < 10000:
+                draw.text(
+                    (7, 11),
+                    text=str(level),
+                    font=one_ts_lvl_font,
+                    fill="white",
+                    stroke_width=1,
+                    stroke_fill=(214, 214, 214),
+                )
+            else:
+                draw.text((5, 11), text=str(level), font=one_ts_lvl_font, fill="white")
+            color_bg.paste(resized_rank, (100, 10), resized_rank)
+            rank_icon.close()
+        color_bg = round_edges(color_bg, 15)
+        av_bg.close(), avatar.close()  # type: ignore
 
-    return color_bg
+        return color_bg
 
-async def all_avatars_rendering(avatars: list, urls: list):
-    main_avatars = avatars
-    avatars_copy = avatars.copy()
-    avatar_dict: dict[str, Image.Image] = {}
-    for av in urls:
-        if av not in avatar_dict:
-            avatar_dict[f"{av}"] = avatars_copy[0]
-            avatars_copy.pop(0)
-    amount_of_avatars = len(urls)
-    last_row_avatars = amount_of_avatars % 3
-    amount_of_rows = math.ceil(amount_of_avatars / 3)
-    av_w, av_h = main_avatars[0].size
-    main_height = (av_h + 10) * amount_of_rows + 50
-    main_width = av_w * 3 + 60
-    logger.debug(
-        f"Avatars last row: {last_row_avatars}. Amount of rows: {amount_of_rows}. Main width/height: {main_width}/{main_height}"
-    )
-    image_font = ImageFont.truetype("Fonts/OpenSans-Bold.ttf", 20)
-    color_bg = Image.new(
-        mode="RGBA", size=(main_width, main_height), color=(66, 66, 66)
-    )
-    draw = ImageDraw.Draw(color_bg)
-    draw.text((15, 15), text="Avatars", font=image_font, fill="white")
-    if last_row_avatars == 0:
-        v = 0
-    else:
-        v = 1
-    for row in range(amount_of_rows - 1 * v):
-        for i in range(0, 3):
-            color_bg.paste(
-                avatar_dict[urls[i + 3 * row]],
-                (20 + (av_w + 10) * i, 50 + (10 + av_h) * row),
-                avatar_dict[urls[i]],
-            )
-    upper_1 = 50 + (10 + av_h) * (amount_of_rows - 1)
-    match last_row_avatars:
-        case 2:  # if two avatars on the last row
-            for i in range(2):
-                left_1 = 20 + round(av_w / 3) * (1 * (i + 1)) + (av_w) * i
+    @staticmethod
+    async def all_avatars_rendering(avatars: list, urls: list):
+        main_avatars = avatars
+        avatars_copy = avatars.copy()
+        avatar_dict: dict[str, Image.Image] = {}
+        for av in urls:
+            if av not in avatar_dict:
+                avatar_dict[f"{av}"] = avatars_copy[0]
+                avatars_copy.pop(0)
+        amount_of_avatars = len(urls)
+        last_row_avatars = amount_of_avatars % 3
+        amount_of_rows = math.ceil(amount_of_avatars / 3)
+        av_w, av_h = main_avatars[0].size
+        main_height = (av_h + 10) * amount_of_rows + 50
+        main_width = av_w * 3 + 60
+        logger.debug(
+            f"Avatars last row: {last_row_avatars}. Amount of rows: {amount_of_rows}. Main width/height: {main_width}/{main_height}"
+        )
+        image_font = ImageFont.truetype("Fonts/OpenSans-Bold.ttf", 20)
+        color_bg = Image.new(
+            mode="RGBA", size=(main_width, main_height), color=(66, 66, 66)
+        )
+        draw = ImageDraw.Draw(color_bg)
+        draw.text((15, 15), text="Avatars", font=image_font, fill="white")
+        if last_row_avatars == 0:
+            v = 0
+        else:
+            v = 1
+        for row in range(amount_of_rows - 1 * v):
+            for i in range(0, 3):
                 color_bg.paste(
-                    avatar_dict[urls[-1 * (i + 1)]],
-                    (left_1, upper_1),
+                    avatar_dict[urls[i + 3 * row]],
+                    (20 + (av_w + 10) * i, 50 + (10 + av_h) * row),
                     avatar_dict[urls[i]],
                 )
-                logger.debug(f"left: {left_1}, upper: {upper_1}")
-        case 1:  # if one avatars on the last row
-            left_2 = 20 + (av_w + 10)
-            color_bg.paste(
-                avatar_dict[urls[-1]], (left_2, upper_1), avatar_dict[urls[0]]
-            )
-            logger.debug(f"left: {left_2}, upper: {upper_1}")
-        case _:  # if three avatars on the last row
-            pass
+        upper_1 = 50 + (10 + av_h) * (amount_of_rows - 1)
+        match last_row_avatars:
+            case 2:  # if two avatars on the last row
+                for i in range(2):
+                    left_1 = 20 + round(av_w / 3) * (1 * (i + 1)) + (av_w) * i
+                    color_bg.paste(
+                        avatar_dict[urls[-1 * (i + 1)]],
+                        (left_1, upper_1),
+                        avatar_dict[urls[i]],
+                    )
+                    logger.debug(f"left: {left_1}, upper: {upper_1}")
+            case 1:  # if one avatars on the last row
+                left_2 = 20 + (av_w + 10)
+                color_bg.paste(
+                    avatar_dict[urls[-1]], (left_2, upper_1), avatar_dict[urls[0]]
+                )
+                logger.debug(f"left: {left_2}, upper: {upper_1}")
+            case _:  # if three avatars on the last row
+                pass
 
-    return color_bg
+        return color_bg
 
 def pretty_date(time, time_utc=True):
     """
@@ -1125,7 +1185,9 @@ def pretty_date(time, time_utc=True):
         return "a year ago"
     return str(round(day_diff / 365)) + " years ago"
 
-def pretty_time_delta(seconds):
+def pretty_time_delta(seconds: int, timedelta:datetime.timedelta = None):
+    if timedelta:
+        seconds = timedelta.total_seconds()
     sign_string = "-" if seconds < 0 else ""
     seconds = abs(int(seconds))
     months, seconds = divmod(seconds, 2629800)
@@ -1149,6 +1211,18 @@ def pretty_time_delta(seconds):
         return "%s%dm %ds" % (sign_string, minutes, seconds)
     else:
         return "%s%ds" % (sign_string, seconds)
+
+
+async def init_bot(bot):
+    if bot_config.launch_variables['rewrite_userdata']:
+        await mysql_main.DatabaseFunctions.iterate_userdata("json_stats")
+        bot_config.launch_variables['rewrite_userdata'] = False
+    if bot_config.launch_variables['telegram_bot']:
+        from telegram_helper.main import MifTelegramReporter
+        bot.telegram_bot = MifTelegramReporter()
+        await bot.telegram_bot._run()
+    
+    bot_config.bot = bot
 
 def countdown_timer(total_milliseconds):
     if total_milliseconds < 0:

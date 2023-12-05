@@ -9,10 +9,9 @@ from tqdm import tqdm
 import math
 from discord.ext import commands
 from discord.ui import Button
-from util.bot_functions import ProgressBar as PB
-from util.bot_exceptions import *
-import util.bot_config as bot_config
-import creds
+from bot_util.bot_functions import ProgressBar as PB
+from bot_util.bot_exceptions import *
+import bot_util.bot_config as bot_config
 from typing import Union
 from get_sheets import SheetsData
 import numpy as np
@@ -38,37 +37,28 @@ class Rarity(enum.Enum):
     orange = 6
     red = 7
 
-    def get_color(self, mode):
-        if mode == "embed":
-            if self.value == "grey":
-                return discord.Color.from_rgb(220, 220, 220)
-            elif self.value == "white":
-                return discord.Color.from_rgb(255, 255, 255)
-            elif self.value == "yellow":
-                return discord.Color.yellow()
-            elif self.value == "blue":
-                return discord.Color.blue()
-            elif self.value == "green":
-                return discord.Color.green()
-            elif self.value == "orange":
-                return discord.Color.orange()
-            elif self.value == "red":
-                return discord.Color.red()
-        elif mode == "message": 
-            if self.value == "grey":
-                return "<:gray_rarity:945418409410166784>"
-            elif self.value == "white":
-                return ":white_circle:"
-            elif self.value == "yellow":
-                return ":yellow_circle:"
-            elif self.value == "blue":
-                return ":blue_circle:"
-            elif self.value == "green":
-                return ":green_circle:"
-            elif self.value == "orange":
-                return ":orange_circle:"
-            elif self.value == "red":
-                return ":red_circle:"
+def get_color(self, mode):
+    colors = {
+        "embed": {
+            "grey": discord.Color.from_rgb(220, 220, 220),
+            "white": discord.Color.from_rgb(255, 255, 255),
+            "yellow": discord.Color.yellow(),
+            "blue": discord.Color.blue(),
+            "green": discord.Color.green(),
+            "orange": discord.Color.orange(),
+            "red": discord.Color.red(),
+        },
+        "message": {
+            "grey": "<:gray_rarity:945418409410166784>",
+            "white": ":white_circle:",
+            "yellow": ":yellow_circle:",
+            "blue": ":blue_circle:",
+            "green": ":green_circle:",
+            "orange": ":orange_circle:",
+            "red": ":red_circle:",
+        },
+    }
+    return colors[mode][self.value]
     
 # @unique
 class ItemType:

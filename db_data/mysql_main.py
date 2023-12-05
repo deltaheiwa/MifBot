@@ -2,20 +2,16 @@ import datetime
 import json
 import os
 import re
-import time
 import builtins
 from typing import Any, Union
-import pymysql
-import pymysql.cursors
 import sqlalchemy as sa
 from sqlalchemy.ext import declarative
 from sqlalchemy.orm import Mapped, sessionmaker, relationship, joinedload
-import creds
-import traceback
+from dotenv import load_dotenv
 import logging
 import coloredlogs
 from datetime import datetime as datetime_
-import util.bot_config as b_cfg
+import bot_util.bot_config as b_cfg
 from db_data.mysql_tables import *
 
 
@@ -27,6 +23,7 @@ file_handler = logging.FileHandler(b_cfg.LogFiles.database_main_log)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
+load_dotenv('creds/.env')
 
 class MySQLConnector:
     engine_db: sa.engine.Engine
@@ -50,7 +47,7 @@ class MySQLConnector:
             if b_cfg.launch_variables['local_db']:
                 cls.connect_to_local_db()
             else:
-                cls.engine_db = sa.create_engine(f"mysql+pymysql://{creds.user}:{creds.password}@{creds.host}:3306/{creds.db_name}")
+                cls.engine_db = sa.create_engine(f"mysql+pymysql://{os.getenv('HOST_USER')}:{os.getenv('HOST_PASSWORD')}@{os.getenv('HOST_IP')}:3306/mif")
                 logger.info("Connection succeded for 'mif'")
                 cls.Session = sessionmaker(bind=cls.engine_db)
                 cls.connected = True
@@ -58,7 +55,7 @@ class MySQLConnector:
             logger.exception("Connection refused for 'mif'")
             cls.connected = False
         
-        if not cls.connected:
+        if not cls.connected: # ! Scrape
             cls.connect_to_local_db()
 
 
@@ -88,57 +85,6 @@ class DatabaseFunctions(MySQLConnector):
             logger.exception("Error while creating tables")
         finally:
             session.close()
-        
-        # try:
-        #     connection = pymysql.connect(
-        #         host=creds.host,
-        #         port=3306,
-        #         user=creds.user,
-        #         password=creds.password,
-        #         database=creds.db_vg_name,
-        #         cursorclass=pymysql.cursors.DictCursor
-        #     )
-        #     print("Connection succeded for 'mif_village_game'")
-        #     print("#"*20)
-
-        #     try:
-        #         with connection.cursor() as cursor:
-        #             create_table_query = "CREATE TABLE IF NOT EXISTS ongoing_games (id INT AUTO_INCREMENT," \
-        #                 "server_id BIGINT NOT NULL," \
-        #                 "status VARCHAR(10) NOT NULL," \
-        #                 "main_os BIGINT," \
-        #                 "player_cap INT NOT NULL," \
-        #                 "phase INT NOT NULL," \
-        #                 "phase_start TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," \
-        #                 "timestamp_added TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," \
-        #                 "PRIMARY KEY (id));"
-        #             cursor.execute(create_table_query)
-        #             print("Table ongoing_games created successfully")
-        #         with connection.cursor() as cursor:
-        #             create_table_query = "CREATE TABLE IF NOT EXISTS roles (id INT AUTO_INCREMENT," \
-        #                 "name VARCHAR(50) NOT NULL," \
-        #                 "role_info JSON," \
-        #                 "game_id INT NOT NULL," \
-        #                 "timestamp_added TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," \
-        #                 "FOREIGN KEY (game_id) REFERENCES ongoing_games(id) ON DELETE CASCADE," \
-        #                 "PRIMARY KEY (id));"
-        #             cursor.execute(create_table_query)
-        #             print("Table roles created successfully")
-        #         with connection.cursor() as cursor:
-        #             create_table_query = "CREATE TABLE IF NOT EXISTS players (id BIGINT NOT NULL," \
-        #                 "game_id INT NOT NULL," \
-        #                 "role_id INT NOT NULL," \
-        #                 "timestamp_added TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," \
-        #                 "FOREIGN KEY (game_id) REFERENCES ongoing_games(id) ON DELETE CASCADE," \
-        #                 "FOREIGN KEY (role_id) REFERENCES roles(id)," \
-        #                 "PRIMARY KEY (id));"
-        #             cursor.execute(create_table_query)
-        #             print("Table players created successfully")
-        #     finally:
-        #         connection.close()
-        # except Exception as e:
-        #     print("Connection refused... For database 'mif_village_game'")
-        #     print(e)
 
     @classmethod
     def cache_check(cls, what_to_search: str, type_of_search: str, name: str) -> bool:
@@ -403,8 +349,7 @@ class DatabaseFunctions(MySQLConnector):
             check = session.query(Users.is_logged).filter(Users.id == member_id).first()
             if check is not None and check['is_logged'] in [True, 1]:
                 return True
-            else:
-                return False
+            return False
         except Exception as e:
             logger.exception("Error while checking if user is logged")
             return False
@@ -431,10 +376,10 @@ class DatabaseFunctions(MySQLConnector):
             session = cls.Session()
             check = session.query(Users.login).filter(Users.login == login).first()
             if check is None:
-                logger.info(f"Login {login} doesn't exist in the database. Returns False")
+                logger.debug(f"Login {login} doesn't exist in the database. Returns False")
                 return False
             else:
-                logger.info(f"Login {login} exists in the database. Returns True")
+                logger.debug(f"Login {login} exists in the database. Returns True")
                 return True
         except Exception as e:
             logger.exception("Error while checking if login exists")
@@ -515,7 +460,7 @@ class DatabaseFunctions(MySQLConnector):
         '''
     This function takes two parameters, a required `id` and an optional `game_id`. It can also take additional keyword arguments. 
 
-    It connects to the database using the information provided by `creds` and then either fetches the records for the given `id` or the record specified by `game_id` if it is set. 
+    It connects to the database and then either fetches the records for the given `id` or the record specified by `game_id` if it is set. 
 
     Finally, it returns a dictionary with the relevant information. 
 
