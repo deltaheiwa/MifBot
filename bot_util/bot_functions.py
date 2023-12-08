@@ -1219,7 +1219,7 @@ async def init_bot(bot):
         bot_config.launch_variables['rewrite_userdata'] = False
     if bot_config.launch_variables['telegram_bot']:
         from telegram_helper.main import MifTelegramReporter
-        bot.telegram_bot = MifTelegramReporter()
+        bot.telegram_bot = MifTelegramReporter(bot.application_id)
         await bot.telegram_bot._run()
     
     bot_config.bot = bot

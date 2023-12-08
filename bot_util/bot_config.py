@@ -8,7 +8,7 @@ load_dotenv('../creds/.env')
 
 perma_config = json.load(open('./bot_util/bot_config_perma.json', 'r'))
 
-version = "0.3.1"
+version = "0.3.2"
 admin_account_ids = perma_config["admin_account_ids"]
 bot_ids = perma_config["bot_ids"]
 testing_guild_id = perma_config["testing_guild_id"]

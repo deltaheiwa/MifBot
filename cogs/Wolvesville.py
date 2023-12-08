@@ -235,6 +235,39 @@ class WovPlayer(discord.ui.View):
         
         await self.message.edit(view=self)
 
+class WovPlayerSelectUsernameConflict(discord.ui.View):
+    def __init__(self, username_1: str, username_2: str):
+        super().__init__(timeout=600)
+        self.username_1 = username_1
+        self.username_2 = username_2
+        self.message: discord.Message
+        self.value = None
+        self.generate_buttons()
+
+    def generate_buttons(self):
+        self.button_1 = discord.ui.Button(label="{username}".format(username=self.username_1), style=discord.ButtonStyle.blurple)
+        self.button_2 = discord.ui.Button(label="{username}".format(username=self.username_2), style=discord.ButtonStyle.blurple)
+        self.button_1.callback = self.callback_1
+        self.button_2.callback = self.callback_2
+        self.add_item(self.button_1)
+        self.add_item(self.button_2)
+        
+
+    async def callback_1(self, interaction: discord.Interaction):
+        self.value = self.username_1
+        self.stop()
+        await self.message.delete()
+    
+    async def callback_2(self, interaction: discord.Interaction):
+        self.value = self.username_2
+        self.stop()
+        await self.message.delete()
+    
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+        await self.message.edit(view=self)
+
 class AvatarSelect(discord.ui.Select):
     def __init__(self, images: list, options, embed_names: list):
         super().__init__(options=options, placeholder="You can select an avatar...",min_values=1,max_values=1)
@@ -322,7 +355,8 @@ class Wolvesville(commands.Cog):
             logger_clan_name = logger_clan_name.decode()
             main_message = None
             DF.add_command_stats(ctx.message.author.id)
-            if DF.cache_check("clan", "name", clan_name) is False:
+            clan_check = DF.cache_check("clan", "name", clan_name)
+            if clan_check[0] is False:
                 logger.info(f"Couldn't find \"{logger_clan_name}\" in cache. Making an API call.")
                 clan_name_search = re.sub("\s", "%20", clan_name)
                 clan_dict = await self.api_caller.add_to_queue(WovApiCall.get_clan_by_name, clan_name_search)
@@ -395,7 +429,6 @@ class Wolvesville(commands.Cog):
                 clan_dict = JO.get_wov_clan_by_name(clan_name)
                 dict_clan, description = clan_dict[1], clan_dict[0]
             
-            print(dict_clan)
             def embed_creation(dict_clan, description):
                 clan_name = re.sub('u([0-9a-f]{4})',lambda m: chr(int(m.group(1),16)),dict_clan['name'])
                 clan_name = surrogates.decode(clan_name)
@@ -437,7 +470,8 @@ class Wolvesville(commands.Cog):
             if main_message is not None: await main_message.edit(attachments=[file_thumbnail], embed=first_embed)
             else: main_message = await ctx.send(file=file_thumbnail, embed=first_embed)
             
-            if DF.cache_check(type_of_search="id", what_to_search="clan_members", name=dict_clan['id']) is True:
+            members_check = DF.cache_check(type_of_search="id", what_to_search="clan_members", name=dict_clan['id'])
+            if members_check[0] is True:
                 member_list = JO.get_wov_clan_members(dict_clan['id'])
             else: 
                 member_list = await self.api_caller.add_to_queue(WovApiCall.get_clan_members, dict_clan['id'])
@@ -492,13 +526,13 @@ class Wolvesville(commands.Cog):
                 await ctx.send(embed=embedErr)
                 return
             cache_cck = DF.cache_check("user", "username", username)
-            if cache_cck is False:
-                logger.debug("Couldn\'t find player in cache. Making an API call...")
+            if cache_cck[0] is False:
+                logger.debug("Couldn\'t find %s in cache. Making an API call...", username)
                 player_dict_future = await self.api_caller.add_to_queue(WovApiCall.get_user_by_name, username)
                 player_dict = await player_dict_future
                 if player_dict is None:
                     player_dict = DF.cache_check("user", "previous_username", username)
-                    if not player_dict:
+                    if player_dict[0] is False:
                         embedErr = discord.Embed(title=_("Error"), description=_("Couldn't find any user with that username. *Maybe they changed it?*"), color=cfg.CustomColors.red)
                         await ctx.send(embed=embedErr)
                         return
@@ -509,9 +543,34 @@ class Wolvesville(commands.Cog):
                 
                 DF.json_caching("user", player_dict)
             else:
-                player_dict = JO.get_wov_player_by_username(username)
-                player_dict, bio_first, previous_username = player_dict[1], player_dict[0], player_dict[2]
-            if (dt.utcnow() - dt.strptime(player_dict['caching_data']['time_cached'], "%Y-%m-%dT%H:%M:%S.%fZ")).days > 30: 
+                if username != cache_cck[1]['username']:
+                    player_username_strict = JO.get_wov_player_by_username(username)
+                    if player_username_strict is None:
+                        logger.debug("Couldn\'t find %s in cache. Making an API call...", username)
+                        player_dict_future = await self.api_caller.add_to_queue(WovApiCall.get_user_by_name, username)
+                        player_dict = await player_dict_future
+                        if player_dict is None:
+                            player_dict = JO.get_wov_player_by_username(cache_cck[1]['username'])
+                        else:
+                            embed_ask = discord.Embed(title=_("Warning"), description=_("Found following usernames:\n- {usernameI}\n- {usernameII}").format(usernameI=cache_cck[1]['username'], usernameII=username), color=cfg.CustomColors.saffron)
+                            view = WovPlayerSelectUsernameConflict(cache_cck[1]['username'], username)
+                            view.message = await ctx.send(embed=embed_ask, view=view)
+                            await view.wait()
+                            if view.value is None:
+                                return
+                            elif view.value == cache_cck[1]['username']:
+                                player_dict = JO.get_wov_player_by_prev_username(view.value)
+                                player_dict, bio_first, previous_username = player_dict[1], player_dict[0], player_dict[2]
+                            else:
+                                bio_first, previous_username = player_dict['personalMessage'] if 'personalMessage' in player_dict else '*No personal message found*', None
+                                DF.json_caching("user", player_dict)
+                    else:
+                        player_dict, bio_first, previous_username = player_username_strict[1], player_username_strict[0], player_username_strict[2]
+                else:
+                    player_dict = JO.get_wov_player_by_username(username)
+                    player_dict, bio_first, previous_username = player_dict[1], player_dict[0], player_dict[2]
+            caching_time = player_dict['caching_data']['time_cached'] if 'caching_data' in player_dict else dt.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            if (dt.utcnow() - dt.strptime(caching_time, "%Y-%m-%dT%H:%M:%S.%fZ")).days > 30: 
                 WovFunc.history_caching(player_dict)
                 player_dict = await self.api_caller.add_to_queue(WovApiCall.get_user_by_id, player_dict['id'])
                 player_dict = await player_dict

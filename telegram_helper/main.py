@@ -21,8 +21,9 @@ class MifTelegramReporter:
 
     Functions that start with _ are not added as commands
     '''
-    def __init__(self):
-        token = os.getenv('TELEGRAM_API_KEY')
+    def __init__(self, bot_id: int):
+        self._load_config()
+        token = os.getenv('TELEGRAM_API_KEY') if bot_id == self.b_cfg.bot_ids[0] else os.getenv('DEVELOPER_TELEGRAM_API_KEY')
         assert token is not None, 'TELEGRAM_API_KEY is not set in .env file'
         self.app = ApplicationBuilder().token(token).build()
 
@@ -30,7 +31,6 @@ class MifTelegramReporter:
             if not command[0].startswith('_'):
                 self.app.add_handler(CommandHandler(command[0], command[1]))
                 print(f'Added command {command[0]}')
-        self._load_config()
         self._setup_logger()
 
         logger.info('Telegram Bot ready')
