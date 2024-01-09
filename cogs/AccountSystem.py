@@ -69,7 +69,7 @@ class DeleteConfirmationModal(discord.ui.Modal):
             title=self._("Error"), description=self._("Something went wrong. Please, try again later\n\nThis problem has been reported to the developer automatically"), color=bot_config.CustomColors.dark_red
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
-        await bot_config.bot.telegram_bot._send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="DeleteConfirmationModal. Check logs for more info")
+        await bot_config.bot.telegram_bot.send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="DeleteConfirmationModal. Check logs for more info")
         
 
 class RegAccountExists(discord.ui.View):
@@ -128,7 +128,7 @@ class RegAccountExists(discord.ui.View):
             title=self._("Error"), description=self._("Something went wrong. Please, try again later\n\nThis problem has been reported to the developer automatically"), color=bot_config.CustomColors.dark_red
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
-        await bot_config.bot.telegram_bot._send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="RegAccountExists. Check logs for more info")
+        await bot_config.bot.telegram_bot.send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="RegAccountExists. Check logs for more info")
 
 class RegistrationModal(discord.ui.Modal):
     def __init__(self, _):
@@ -187,7 +187,7 @@ class RegistrationModal(discord.ui.Modal):
             title=self._("Error"), description=self._("Something went wrong. Please, try again later\n\nThis problem has been reported to the developer automatically"), color=bot_config.CustomColors.dark_red
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
-        await bot_config.bot.telegram_bot._send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="RegistrationModal. Check logs for more info")
+        await bot_config.bot.telegram_bot.send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="RegistrationModal. Check logs for more info")
 
 class RegistrationView(discord.ui.View):
     def __init__(self, _, *, timeout = 600):
@@ -213,7 +213,7 @@ class RegistrationView(discord.ui.View):
             title=self._("Error"), description=self._("Something went wrong. Please, try again later\n\nThis problem has been reported to the developer automatically"), color=bot_config.CustomColors.dark_red
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
-        await bot_config.bot.telegram_bot._send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="RegistrationView. Check logs for more info")
+        await bot_config.bot.telegram_bot.send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="RegistrationView. Check logs for more info")
 
 class TransferConfirmModal(discord.ui.Modal):
     def __init__(self, account_info, user1, _):
@@ -248,7 +248,7 @@ class TransferConfirmModal(discord.ui.Modal):
             title=self._("Error"), description=self._("Something went wrong. Please, try again later\n\nThis problem has been reported to the developer automatically"), color=bot_config.CustomColors.dark_red
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
-        await bot_config.bot.telegram_bot._send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="TransferConfirmModal. Check logs for more info") 
+        await bot_config.bot.telegram_bot.send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="TransferConfirmModal. Check logs for more info") 
 
 class LoginModal(discord.ui.Modal):
     def __init__(self, bot, _):
@@ -329,7 +329,7 @@ class LoginModal(discord.ui.Modal):
             title=self._("Error"), description=self._("Something went wrong. Please, try again later\n\nThis problem has been reported to the developer automatically"), color=bot_config.CustomColors.dark_red
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
-        await bot_config.bot.telegram_bot._send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="LoginModal. Check logs for more info")
+        await bot_config.bot.telegram_bot.send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="LoginModal. Check logs for more info")
 
 class LoginView(discord.ui.View):
     def __init__(self, bot, _, *, timeout = 600):
@@ -356,7 +356,7 @@ class LoginView(discord.ui.View):
             title=self._("Error"), description=self._("Something went wrong. Please, try again later\n\nThis problem has been reported to the developer automatically"), color=bot_config.CustomColors.dark_red
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
-        await bot_config.bot.telegram_bot._send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="LoginView. Check logs for more info")
+        await bot_config.bot.telegram_bot.send_automatic_exception(error, func=self.__class__.__name__, line=error.__traceback__.tb_lineno, extra="LoginView. Check logs for more info")
 
 #---------------------------------------------------------------------------------------#
 class AccountSystem(commands.Cog):
@@ -402,7 +402,7 @@ class AccountSystem(commands.Cog):
                 view_reg.message = await userM.send(embed=embedWarn, view=view_reg)
         except Exception as e:
             logger.exception(e)
-            await bot_config.bot.telegram_bot._send_automatic_exception(e, ctx=ctx, line=e.__traceback__.tb_lineno)
+            await bot_config.bot.telegram_bot.send_automatic_exception(e, ctx=ctx, line=e.__traceback__.tb_lineno)
 
     @commands.hybrid_command(name="login", with_app_command=True, description="Login into your 'Mif' account")
     async def login(self, ctx: commands.Context):
@@ -435,7 +435,7 @@ class AccountSystem(commands.Cog):
                 view.message = await user.send(embed=embed, view=view)
         except Exception as e:
             logger.exception(e)
-            await bot_config.bot.telegram_bot._send_automatic_exception(e, ctx=ctx, line=e.__traceback__.tb_lineno)
+            await bot_config.bot.telegram_bot.send_automatic_exception(e, ctx=ctx, line=e.__traceback__.tb_lineno)
 
     @commands.hybrid_command(name="logout",with_app_command=True, description="Logs you out from your 'Mif' account")
     async def logout(self, ctx: commands.Context):
@@ -457,7 +457,7 @@ class AccountSystem(commands.Cog):
                         await user.send(_("You successfully logged out!"))
         except Exception as e:
             logger.exception(e)
-            await bot_config.bot.telegram_bot._send_automatic_exception(e, ctx=ctx, line=e.__traceback__.tb_lineno)
+            await bot_config.bot.telegram_bot.send_automatic_exception(e, ctx=ctx, line=e.__traceback__.tb_lineno)
     
     @commands.hybrid_command(name="nickname",with_app_command=True, description="Changes your nickname, of your 'Mif' account")
     async def nickname(self, ctx: commands.Context, *, nickname = None):
@@ -478,7 +478,7 @@ class AccountSystem(commands.Cog):
                 DF.add_command_stats(user.id)
         except Exception as e:
             logger.exception(e)
-            await bot_config.bot.telegram_bot._send_automatic_exception(e, ctx=ctx, line=e.__traceback__.tb_lineno)
+            await bot_config.bot.telegram_bot.send_automatic_exception(e, ctx=ctx, line=e.__traceback__.tb_lineno)
 
     @commands.hybrid_command(name="wallet",with_app_command=True, description="Shows the amount of coins you have")
     async def wallet(self, ctx: commands.Context):
@@ -553,7 +553,7 @@ class AccountSystem(commands.Cog):
                 DF.add_command_stats(user.id)
         except Exception as e:
             logger.exception(e)
-            await bot_config.bot.telegram_bot._send_automatic_exception(e, ctx=ctx, line=e.__traceback__.tb_lineno)
+            await bot_config.bot.telegram_bot.send_automatic_exception(e, ctx=ctx, line=e.__traceback__.tb_lineno)
         
 
 
