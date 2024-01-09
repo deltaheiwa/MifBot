@@ -1,4 +1,6 @@
 import shutil
+import subprocess
+import sys
 import aiohttp
 import discord
 from discord.ext import commands
@@ -105,13 +107,15 @@ class Special(commands.Cog):
         message = await ctx.send("Launching bot...")
         try:
             self.bot.telegram_bot = MifTelegramReporter(self.bot.application_id)
-            await self.bot.telegram_bot._run()
+            await self.bot.telegram_bot.run()
         except Exception as e:
             await message.edit(content=f"Error launching bot\n{e}")
 
-    @commands.command(
+    @commands.hybrid_command(
         name="reload-cog",
         description="Reloads specified cog",
+        with_app_command=True,
+        guild=discord.Object(id=b_cfg.main_guild_id),
         aliases=["rc", "r-c", "reload-c", "reloadc"],
     )
     @dev_command()
@@ -123,9 +127,28 @@ class Special(commands.Cog):
             await ctx.send(f"Couldn't reload cog {cog}")
             logger.error(e)
 
-    @commands.command(
+    @commands.command()
+    @dev_command()
+    async def restart(self, ctx):
+        script_path = os.path.join(
+            os.getcwd(), "run_bot.bat" if os.name == "nt" else "run_bot.bash"
+        )
+
+        try:
+            # subprocess.run(
+            #    [script_path], check=True, shell=True if os.name == "nt" else False
+            # )
+            await ctx.send("Bot restarted")
+            await self.bot.stop()
+        except Exception as e:
+            logger.exception(e)
+            await ctx.send("Error restarting bot")
+
+    @commands.hybrid_command(
         name="update-file",
         description="Updates specified file",
+        with_app_command=True,
+        guild=discord.Object(id=b_cfg.main_guild_id),
         aliases=["uf", "u-f", "update-f", "updatef"],
     )
     @dev_command()
@@ -341,10 +364,12 @@ class Special(commands.Cog):
 
         get_sheets.delete_cache()
 
-    @commands.command(
+    @commands.hybrid_command(
         aliases=[],
+        with_app_command=True,
         name="information",
         description="Get information about the bot",
+        guilds=[b_cfg.main_guild_id],
     )
     @dev_command()
     async def information(self, ctx: commands.Context):
@@ -361,10 +386,12 @@ class Special(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(
+    @commands.hybrid_command(
         aliases=["dir"],
+        with_app_command=True,
         name="directory",
         description="Get the directory structure of the bot",
+        guilds=[b_cfg.main_guild_id],
     )
     @dev_command()
     async def directory(self, ctx):
@@ -380,9 +407,11 @@ class Special(commands.Cog):
         with open(file_path, "rb") as file:
             await ctx.send(file=discord.File(file, "directory_list.txt"))
 
-    @commands.command(
+    @commands.hybrid_command(
         name="help-dev",
         description="Provides help information for developer commands",
+        with_app_command=True,
+        guilds=[b_cfg.main_guild_id],
         aliases=["helpDev", "helpD"],
     )
     @dev_command()

@@ -20,5 +20,5 @@ COPY poetry.lock pyproject.toml /code/
 RUN POETRY_VIRTUALENVS_CREATE=false poetry install --no-interaction --no-ansi
 
 COPY . /code
-
+RUN chmod +x run_bot.bash
 CMD ["python3", "main.py"]

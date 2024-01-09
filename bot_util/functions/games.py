@@ -2,7 +2,7 @@ from enum import Enum
 import random
 from typing import Callable
 from bot_util import bot_config
-from db_data.mysql_main import DatabaseFunctions as DF
+from db_data.psql_main import DatabaseFunctions as DBF
 import discord
 
 
@@ -83,9 +83,9 @@ class BlackJack:
     def process_results(code: BlackJackEndCodes, user_id: int, coins_bet: int):
         match code:
             case BlackJackEndCodes.PLAYER_WON:
-                DF.update_userdata(user_id, "cash", int(DF.get_userdata_by_id(user_id, ["cash"])['cash'] + coins_bet * 2))
+                DBF.add_coins(user_id, coins_bet * 2)
             case BlackJackEndCodes.TIE:
-                DF.update_userdata(user_id, "cash", int(DF.get_userdata_by_id(user_id, ["cash"])['cash'] + coins_bet))
+                DBF.add_coins(user_id, coins_bet)
 
     @staticmethod
     def create_blackjack_embed(game_dict: dict, outcome_message: str | None, gettext: Callable, status_code: BlackJackEndCodes) -> discord.Embed:

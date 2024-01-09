@@ -9,7 +9,6 @@ class Scheduler:
         self.scheduler.start()
     
     def schedule(self):
-        # Initialize scheduler
         schedule_log = logging.getLogger("apscheduler")
         schedule_log.setLevel(logging.WARNING)
 
@@ -21,3 +20,4 @@ class Scheduler:
         }
 
         self.scheduler = AsyncIOScheduler(job_defaults=job_defaults, logger=schedule_log)
+        

@@ -8,7 +8,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2023-06-18 15:03+0200\n"
 "PO-Revision-Date: 2023-02-25 21:53+0200\n"
-"Last-Translator: Dan Shap <filler>\n"
+"Last-Translator: Dan Shap <georgi.jolak@gmail.com>\n"
 "Language: uk\n"
 "Language-Team: Ukrainian <LL@li.org>\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
@@ -1551,14 +1551,12 @@ msgid "Players"
 msgstr ""
 
 #: cogs/SmallGames.py:1124
-#, fuzzy
 msgid "Date played"
-msgstr "*Не зіграв жодної гри*"
+msgstr "Дата"
 
 #: cogs/SmallGames.py:1125
-#, fuzzy
 msgid "Duration"
-msgstr "Рейтинг"
+msgstr "Тривалість"
 
 #: cogs/SmallGames.py:1126
 msgid "Amount of turns"

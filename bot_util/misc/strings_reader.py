@@ -1,5 +1,4 @@
 import csv
-import os
 import discord
 import random
 
@@ -19,7 +18,8 @@ class BotStringsReader:
             match self.filename:
                 case "triggering":
                     times_called = query_info.get("times_called", 1)
-                    if times_called > 3: times_called = 3
+                    if times_called > 3:
+                        times_called = 3
                     amount_of_people = query_info.get("amount", 1)
                     row = random.choice(reader_row_list)
                     return self.parse_string(row[times_called-1], amount_of_people)
