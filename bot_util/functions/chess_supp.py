@@ -67,7 +67,7 @@ def board_to_image(
             check=check_square,
             orientation=chess.WHITE,
         )
-        bytes_image = svg2png(bytestring=board_svg, write_to=image_binary) # idk why it's here, but the code breaks if I remove. Fuck this 
+        bytes_image = svg2png(bytestring=board_svg, write_to=image_binary)  # IDK why it's here, but the code breaks if I remove. Fuck this
         image_binary.seek(0)
         board_png_image = Image.open(fp=image_binary)
         image_binary.seek(0)
@@ -100,6 +100,7 @@ def chess_pieces_visualizer(symbol):
         color_toggle = not color_toggle
     return "".join(symbol_matrix)
 
+
 def chess_eval(eval: int, mate=False):
     if eval is None:
         return "None"
@@ -113,6 +114,7 @@ def chess_eval(eval: int, mate=False):
             return f"+{eval/100:.2f}"
         else:
             return f"{eval/100:.2f}"
+
 
 def chess_eval_comment(eval: int, mate=False):
     if eval is None:
@@ -147,6 +149,7 @@ def chess_eval_comment(eval: int, mate=False):
         return "Black is winning decisively"
     
     return "Position is equal"
+
 
 def fetch_flair(flair: str):
     flair_tokens = flair.split('.')

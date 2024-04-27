@@ -1,11 +1,10 @@
+import os
+
 import discord
-import random
-import asyncio
-import json
 import asyncpg
 import shutil
 from discord.ext import commands, tasks
-from bot_util.bot_functions import *
+
 
 class PlayersBackup(commands.Cog):
     def __init__(self, bot: commands.Bot):

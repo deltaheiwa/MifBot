@@ -5,6 +5,7 @@ from bot_util.misc import Logger
 
 logger = Logger("bot_util.functions.config")
 
+
 def add_telegram_chat(chat_id: int):
     try:
         if chat_id not in bot_config.telegram_chat_id:
@@ -21,6 +22,7 @@ def add_telegram_chat(chat_id: int):
     except Exception:
         logger.exception("Error in add_telegram_chat")
         return False
+
 
 def remove_telegram_chat(chat_id: int):
     try:
@@ -39,6 +41,7 @@ def remove_telegram_chat(chat_id: int):
         logger.exception("Error in remove_telegram_chat")
         return False
 
+
 async def init_bot(bot):
     # if bot_config.launch_variables["rewrite_userdata"]:
     #     await mysql_main.DatabaseFunctions.iterate_userdata("json_stats")
@@ -48,6 +51,3 @@ async def init_bot(bot):
 
         bot.telegram_bot = MifTelegramReporter(bot.application_id)
         await bot.telegram_bot.run()
-
-
-

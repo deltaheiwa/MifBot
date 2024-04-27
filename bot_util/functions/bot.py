@@ -20,20 +20,15 @@ async def determine_prefix(client: discord.Client, message: discord.Message) -> 
             if message.guild
             else None
         )
-        if user_pref is None or user_pref != message.content[0 : len(user_pref)]:
+        if user_pref is None or user_pref != message.content[0: len(user_pref)]:
             prefix = guild_pref or "."
         else:
             prefix = user_pref
         return prefix
     except Exception as e:
         logger.exception(f"Error in determine_prefix: {e}")
-        await client.telegram_bot.send_automatic_exception(
-            e,
-            func=determine_prefix,
-            line=e.__traceback__.tb_lineno,
-            extra=f"Message: {message.content}",
-        )
         return "."
+
 
 @lru_cache(maxsize=None)
 def coins_formula(day, multiplier):

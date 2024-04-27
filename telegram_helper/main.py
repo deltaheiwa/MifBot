@@ -1,10 +1,11 @@
 import os
 import logging
+import re
 import shutil
 from discord.ext.commands import Context
 from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Application
 import inspect
 from .util.attributes import telegram_command
 from .util.functions import is_command
@@ -25,7 +26,15 @@ class MifTelegramReporter:
 
     Functions that start with _ are not added as commands
     """
-    def __init__(self, bot_id):
+    instance = None  # Singleton instance
+    app: Application
+
+    def __new__(cls, *args, **kwargs):
+        if not cls.instance:
+            cls.instance = super().__new__(cls)
+        return cls.instance
+
+    def __init__(self, bot_id: str = None):
         self.__load_config()
         token = os.getenv('TELEGRAM_API_KEY') if bot_id == self.b_cfg._PROD_BOT_ID \
             else os.getenv('DEVELOPER_TELEGRAM_API_KEY')
@@ -38,13 +47,13 @@ class MifTelegramReporter:
                 print(f'Added command {command[0]}')
 
         logger.info('Telegram Bot ready')
+        self.instance = self
     
     def __load_config(self):
         from bot_util import bot_config as b_cfg
         from bot_util.functions import config
         self.b_cfg = b_cfg
         self.ConfigFunctions = config
-
 
     async def run(self):
         logger.info('Running telegram bot')
@@ -91,14 +100,23 @@ class MifTelegramReporter:
         if self.app.bot is None:
             return
         if ctx is not None:
-            error_message = f'*Exception occurred:*\n`{exception}`\n*In command* `{ctx.command}` *which is in* `{ctx.cog.__cog_name__}` *on line* `{"Unknown" if not line else line}`\n{f"*Function:* {func}" if func else ""} \n*Message content:*\n`{ctx.message.content}`\n*Sent by* \n`{ctx.author}`'
+            error_message = f'*Exception occurred:*\n`{exception}`\n*In command* `{ctx.command}` *which is in* `{ctx.cog.__cog_name__ if ctx.cog else "main"}` *on line* `{"Unknown" if not line else line}`\n{f"*Function:* {func}" if func else ""} \n*Message content:*\n`{ctx.message.content}`\n*Sent by* \n`{ctx.author}`'
         else:
             error_message = f'*Exception occurred:*\n`{exception}`\n*In function* `{func}` *on line* `{"Unknown" if not line else line}`'
 
         if extra:
             error_message += f'\n*Extra info:*\n`{extra}`'
+        
+        # replace '-' with '\-' to escape reserved character
+        error_message = re.sub("-", "\\-", error_message)
         for chat_id in self.b_cfg.telegram_chat_id:
             await self.app.bot.send_message(chat_id=chat_id, parse_mode="MarkdownV2", text=error_message)
+    
+    async def send_message_report(self, message: str, *args):
+        if self.app.bot is None:
+            return
+        for chat_id in self.b_cfg.telegram_chat_id:
+            await self.app.bot.send_message(chat_id=chat_id, text=message + ("Args: " + str(args) if args else ""))
 
     @telegram_command
     async def logs(self, update: Update, context: ContextTypes.DEFAULT_TYPE):

@@ -3,22 +3,11 @@ import logging
 from bot_util.bot_config import IS_DEV_BUILD
 
 
-class bcolors:
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    OKCYAN = "\033[96m"
-    OKGREEN = "\033[92m"
-    WARNING = "\033[93m"
-    FAIL = "\033[91m"
-    ENDC = "\033[0m"
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
-
-
 class CustomFormatter(logging.Formatter):
-    grey = "\x1b[38;20m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
+    grey = "\x1b[38;21m"
+    blue = "\x1b[34;21m"
+    yellow = "\x1b[33;21m"
+    red = "\x1b[31;21m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
     format_str = (
@@ -27,20 +16,20 @@ class CustomFormatter(logging.Formatter):
 
     FORMATS = {
         logging.DEBUG: grey + format_str + reset,
-        logging.INFO: grey + format_str + reset,
+        logging.INFO: blue + format_str + reset,
         logging.WARNING: yellow + format_str + reset,
         logging.ERROR: red + format_str + reset,
         logging.CRITICAL: bold_red + format_str + reset,
     }
 
     def format(self, record):
-        log_fmt = self.format_str
+        log_fmt = self.FORMATS.get(record.levelno)
         self._style._fmt = log_fmt
         return super().format(record)
 
 
 class CustomLogger(logging.Logger):
-    def __init__(self, name: str, level = 0, log_file_path: str = None) -> None:
+    def __init__(self, name: str, level=0, log_file_path: str = None) -> None:
         super().__init__(name, level)
         self.file = log_file_path
         self.console_handler: logging.StreamHandler = None
@@ -48,21 +37,21 @@ class CustomLogger(logging.Logger):
         self.set_console_level()
         self.set_file_handler() if self.file else None
         self.install_coloredlogs()
-    
+
     def set_console_handler(self):
         self.console_handler = logging.StreamHandler()
         self.console_handler.setFormatter(CustomFormatter())
         self.addHandler(self.console_handler)
-    
+
     def set_file_handler(self):
         file_handler = logging.FileHandler(self.file)
-        file_handler.setLevel(logging.INFO) 
+        file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(CustomFormatter())
         self.addHandler(file_handler)
-    
+
     def set_console_level(self):
-        self.console_handler.setLevel(logging.DEBUG if IS_DEV_BUILD else logging.INFO) 
-    
+        self.console_handler.setLevel(logging.DEBUG if IS_DEV_BUILD else logging.INFO)
+
     def install_coloredlogs(self):
         try:
             import coloredlogs

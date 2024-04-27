@@ -4,7 +4,7 @@ The main file of the bot. Launches the bot and sets up the environment.
 Requirements:
 - TOKEN environment variable must be set in .env file
 - Check the requirements.txt file for the list of required packages
-- You need to have a MySQL server running on your machine. Credentials are stored in .env file
+- You need to have a Postgresql server running on your machine. Credentials are stored in .env file
 
 Other requirements can be found in other .py files
 
@@ -30,15 +30,14 @@ from bot_util import exceptions
 from bot_util.converters import MembersOrRoles
 from bot_util.functions.bot import determine_prefix
 from bot_util.functions.config import init_bot
-from bot_util.functions.discord import channel_perms_change
+from bot_util.functions.dc import channel_perms_change
 from bot_util.functions.universal import chance, pretty_date
 import bot_util.bot_config as b_cfg
 from bot_util.bot_config import IS_DEV_BUILD
 from bot_util.misc import AsyncTranslator, BotStringsReader, WebSocketClient, Logger
 from telegram_helper.main import MifTelegramReporter
-from db_data.database_main import PrefixDatabase
+from db_data.database_main import LanguageCodeDB, PrefixDatabase, LocalCache
 from db_data import psql_main
-# from vg_ext.database.connector import PUDBConnector
 
 toc = time.perf_counter()
 
@@ -89,6 +88,8 @@ class Mif(commands.Bot):
         await self.wait_until_ready()
         logger.info("Connecting to the databases")
 
+        LanguageCodeDB.initiate_db()
+        LocalCache.create_tables()
         psql_main.PostgresConnector.connect_to_dev_db() if IS_DEV_BUILD else psql_main.PostgresConnector.connect_to_prod_db()
         psql_main.DatabaseFunctions.create_tables()
         # PUDBConnector.engine_creation()
@@ -98,7 +99,9 @@ class Mif(commands.Bot):
         )
 
     async def stop(self):
-        await self.telegram_bot.close() if self.telegram_bot is not None else logger.warning(
+        await (
+            self.telegram_bot.close()
+        ) if self.telegram_bot is not None else logger.warning(
             "No telegram bot instance detected"
         )
         await self.close()
@@ -371,15 +374,31 @@ class PreferencesModal(discord.ui.Modal):
         max_length=5,
         required=False,
     )
+    stats_privacy = discord.ui.TextInput(
+        label="Privacy for statistics",
+        placeholder="Type [public] or [private] to change the privacy of your statistics",
+        min_length=6,
+        max_length=7,
+        required=False,
+    )
 
     async def on_submit(self, interaction: discord.Interaction):
+        # Prefix
         self.preferences["prefix"] = (
             self.custom_prefix.value if self.custom_prefix.value != "" else None
         )
-        psql_main.DatabaseFunctions.store_custom_prefix(
-            self.user_id, self.preferences["prefix"]
-        )
         await PrefixDatabase.new_prefix(self.user_id, self.preferences["prefix"])
+
+        # Stats privacy
+        legit_privacy: bool = self.stats_privacy.value.lower() in ["public", "private"]
+        if legit_privacy:
+            self.preferences["publicStats"] = (
+                True if self.stats_privacy.value == "public" else False
+            )
+
+        # Update preferences
+        psql_main.DatabaseFunctions.update_user_preferences(self.user_id, self.preferences)
+
         async with AsyncTranslator(
             language_code=psql_main.DatabaseFunctions.get_lang_code(self.user_id)
         ) as lang:
@@ -387,6 +406,11 @@ class PreferencesModal(discord.ui.Modal):
             _ = lang.gettext
             embed = self.func(self.preferences, _)
             await interaction.response.edit_message(view=self.view, embed=embed)
+            if not legit_privacy:
+                await interaction.response.followup.send(
+                    _("Invalid privacy value. Please type either `public` or `private`"),
+                    ephemeral=True,
+                )
 
 
 class PreferencesView(discord.ui.View):
@@ -426,6 +450,7 @@ class PreferencesView(discord.ui.View):
         language = select.values[0]
         self.preferences["language"] = language
         psql_main.DatabaseFunctions.store_lang_code(self.user_id, language)
+        LanguageCodeDB.add_language_code(self.user_id, language)
 
         async with AsyncTranslator(language_code=language) as lang:
             lang.install()
@@ -454,7 +479,7 @@ class PreferencesView(discord.ui.View):
 )
 async def preferences(ctx: commands.Context):
     user = ctx.author
-
+    await ctx.defer(ephemeral=True)
     async_trans = AsyncTranslator(
         language_code=psql_main.DatabaseFunctions.get_lang_code(ctx.author.id)
     )
@@ -491,6 +516,12 @@ async def preferences(ctx: commands.Context):
                     name=_("Language"),
                     value=f"{b_cfg.language_emojis[preferences['language']]} **{lang_text}**",
                     inline=False,
+                )
+                embed.add_field(
+                    name=_("Privacy"),
+                    value=_("- Statistics: **{}**").format(
+                        "Public" if preferences["publicStats"] else "Private"
+                    ),
                 )
                 return embed
 
@@ -597,7 +628,7 @@ async def nsfw(ctx: commands.Context):
 )
 @commands.has_guild_permissions(manage_permissions=True)
 @app_commands.choices(
-    add_remove=[
+    action=[
         app_commands.Choice(name="Add", value="add"),
         app_commands.Choice(name="Remove", value="remove"),
         app_commands.Choice(name="Default", value="default"),
@@ -605,9 +636,10 @@ async def nsfw(ctx: commands.Context):
 )
 @commands.guild_only()
 async def channel_access(
-    ctx: commands.Context, add_remove, channel: discord.TextChannel, *, members: str
+    ctx: commands.Context, action=None, channel: discord.TextChannel = None, *, members: str
 ):
     await ctx.defer(ephemeral=True)
+
     perms_change = {"add": True, "remove": False, "default": None}
     members = members.split(" ")
 
@@ -618,11 +650,18 @@ async def channel_access(
         lang.install()
         _ = lang.gettext
 
-        if add_remove.lower() not in perms_change:
+        async def action_error():
             await ctx.send(
                 _("Please specify if you want to add/remove or set default permissions")
             )
+        if action is None:  # If no action was specified
+            await action_error()
             return
+        elif isinstance(action, str) and action.lower() not in perms_change:  # If action is not in the list of actions
+            await action_error()
+            return
+        else:  # If action is an app_command.Choice
+            action = action.value
 
         if len(members) < 1:
             await ctx.send(_("User not specified"))
@@ -642,7 +681,7 @@ async def channel_access(
                 else:
                     processed_members.append(member_dc)
 
-        if not processed_members:
+        if not processed_members:  # If no members were found (it would notify the user already)
             return
 
         if not isinstance(channel, discord.TextChannel):
@@ -662,7 +701,7 @@ async def channel_access(
                 if isinstance(member, str):
                     continue
                 await channel_perms_change(
-                    member, channel, perms_change[add_remove.lower()]
+                    member, channel, perms_change[action.lower()]
                 )
                 mentions.append(member.mention)
             await ctx.reply(_("Updated permissions for {}").format(" ".join(mentions)))
@@ -825,7 +864,7 @@ async def help(ctx):
                     "Shows stats of a certain lichess player. This command accepts variants of chess as second argument to receive detailed stats of certain player for that variant. \nExample: `.lichessplayer {username} rapid`. \nAliases: liplayer, li-player, li-p"
                 ),
                 "lichess-game": _(
-                    "Shows stats of a certain lichess game. \nExample: `.lichess-game {game id}`. \nAliases: li-game, li-g, lichessgame"
+                    "Shows a specified lichess game. \nExample: `.lichess-game {game id}`. \nAliases: li-game, li-g, lichessgame"
                 ),
                 "random-opening": _(
                     "Shows a random opening for inspirational purposes. \nExample: `.random-opening` \nAliases: roc"

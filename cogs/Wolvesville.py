@@ -1,46 +1,36 @@
 import calendar
-from functools import cache
-import discord
-import logging
-import asyncio
-from io import BytesIO
-import json
-from discord.ext import commands
 from datetime import datetime as dt, timedelta
-from bot_util.bot_functions import (
-    AsyncTranslator,
-    CustomFormatter,
-    APICaller,
+import re
+import json
+from typing import Literal
+
+import discord
+from discord.ext import commands
+from io import BytesIO
+from pathlib import Path
+import pytz
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import matplotlib as mpl
+import surrogates
+
+from bot_util.enums import TimestampFormats
+from bot_util.misc import AsyncTranslator, Logger
+from bot_util.misc.api_callers import WovApiCall, WovAPICaller, WovClanApiCall
+from bot_util.functions import wolvesville
+from bot_util.functions.universal import (
     pretty_time_delta,
     pretty_date,
     percentage_calc,
-    WovApiCall,
-    WolvesvilleFunctions as WovFunc,
+    timestamp_maker
 )
-from db_data.mysql_main import DatabaseFunctions as DF, JsonOperating as JO
+from db_data.psql_main import DatabaseFunctions as DF
 import bot_util.bot_config as cfg
-from pathlib import Path
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
-import matplotlib.dates as mdates
-import matplotlib as mpl
-import re
-import pytz
-import surrogates
-import coloredlogs
+
 
 WOV_CLAN_SEARCH = {}
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s:%(levelname)s --- %(message)s")
-console_formatter = CustomFormatter()
-stream_handler = logging.StreamHandler()
-coloredlogs.install(level="DEBUG", logger=logger)
-file_handler_debug = logging.FileHandler(cfg.LogFiles.wolvesville_log)
-file_handler_debug.setFormatter(formatter)
-stream_handler.setFormatter(console_formatter)
-logger.addHandler(file_handler_debug)
+logger = Logger(__name__, log_file_path=cfg.LogFiles.wolvesville_log)
 
 
 class WovClan(discord.ui.View):
@@ -50,7 +40,7 @@ class WovClan(discord.ui.View):
         super().__init__(timeout=timeout)
         self.json_data = clan_json_data
         self.embed_func = embed_func
-        self.api_caller: APICaller = api_caller
+        self.api_caller: WovAPICaller = api_caller
 
     @discord.ui.button(
         label="", emoji=cfg.CustomEmojis.rerequest, style=discord.ButtonStyle.gray
@@ -63,7 +53,7 @@ class WovClan(discord.ui.View):
         )
         time_diff = time_diff.total_seconds()
         button.disabled = True
-        async with AsyncTranslator(JO.get_lang_code(interaction.user.id)) as at:
+        async with AsyncTranslator(DF.get_lang_code(interaction.user.id)) as at:
             at.install()
             _ = at.gettext
             if time_diff < 3600:
@@ -81,10 +71,9 @@ class WovClan(discord.ui.View):
                 member_list = await self.api_caller.add_to_queue(
                     WovApiCall.get_clan_members, self.json_data["id"]
                 )
-                member_list = await member_list
                 description = self.json_data["description"]
-                DF.json_caching("clan", self.json_data)
-                DF.json_caching("clan_members", member_list, self.json_data["id"])
+                DF.store_wov_clan_cache(self.json_data)
+                DF.store_wov_clan_members_cache(self.json_data["id"], member_list)
                 new_embed, file_thumbnail = self.embed_func(
                     dict_clan=self.json_data, description=description
                 )
@@ -170,6 +159,47 @@ class WovClan(discord.ui.View):
         await self.message.edit(view=self)
 
 
+class GraphExplaining(discord.ui.View):
+    def __init__(self, gettext, *, timeout: float | None = 180):
+        super().__init__(timeout=timeout)
+        self._ = gettext
+        self.message: discord.Message
+
+    @discord.ui.button(label="Why?", style=discord.ButtonStyle.blurple)
+    async def why(self, interaction: discord.Interaction, button: discord.ui.Button):
+        embed = discord.Embed(
+            title=self._("How it works?"),
+            description=self._("Or why can't the graph be built."),
+            color=cfg.CustomColors.cyan,
+        )
+        embed.add_field(
+            name=self._("Implementation"),
+            value=self._(
+                "As there is no direct access to personal SP Logs via API (*yet*, hopefully), the graph is implemented via storing "
+                + "your skill points in the cache, this cache is then used to generate the graph. Cache consists of manually requested data, with timestamps."
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name=self._("Not enough data"),
+            value=self._(
+                "It needs at least three data points to create a *meaningful* graph. You can update the data every hour by pressing the `🔄` button."
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name=self._("Data age"),
+            value=self._(
+                "The graph only uses data from the past 30 days. Older data is not considered, which might result in graph looking too empty."
+            ),
+            inline=False,
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    async def on_timeout(self) -> None:
+        await self.message.edit(view=None)
+
+
 class WovPlayer(discord.ui.View):
     def __init__(
         self, embed_func, json_data, days, gettext, api_caller, *, timeout=3600
@@ -179,7 +209,7 @@ class WovPlayer(discord.ui.View):
         self.json_data = json_data
         self.days = days
         self._ = gettext
-        self.api_caller: APICaller = api_caller
+        self.api_caller: WovAPICaller = api_caller
 
     @discord.ui.button(label="SP graph", style=discord.ButtonStyle.blurple)
     async def sp_graph(
@@ -193,7 +223,10 @@ class WovPlayer(discord.ui.View):
         ):
             button.disabled = True
             await interaction.response.edit_message(view=self)
-            await interaction.followup.send(content=self._("Not enough data for graph"))
+            why_view = GraphExplaining(self._)
+            why_view.message = await interaction.followup.send(
+                content=self._("Not enough data for graph"), view=why_view
+            )
         else:
             fixed_tp = []
             sp_list = []
@@ -319,7 +352,7 @@ class WovPlayer(discord.ui.View):
         if time_diff < 3600:  # 1 hour
             button.disabled = True
             await interaction.response.edit_message(view=self)
-            async with AsyncTranslator(JO.get_lang_code(interaction.user.id)) as at:
+            async with AsyncTranslator(DF.get_lang_code(interaction.user.id)) as at:
                 at.install()
                 _ = at.gettext
                 await interaction.followup.send(
@@ -328,12 +361,12 @@ class WovPlayer(discord.ui.View):
                     ).format(again_in=pretty_time_delta(3600 - time_diff))
                 )
         else:
-            WovFunc.history_caching(self.json_data)
+            wolvesville.history_caching(self.json_data)
             json_data_future = await self.api_caller.add_to_queue(
                 WovApiCall.get_user_by_id, self.json_data["id"]
             )
             self.json_data = await json_data_future
-            DF.json_caching("user", self.json_data)
+            DF.store_wov_user_cache(self.json_data)
             embedP = await self.embed_func(self.json_data)
             await interaction.response.edit_message(
                 attachments=[embedP[1]], embed=embedP[0], view=self
@@ -386,7 +419,7 @@ class WovPlayerSelectUsernameConflict(discord.ui.View):
 
 
 class AvatarSelect(discord.ui.Select):
-    def __init__(self, images: list, options, embed_names: list):
+    def __init__(self, images: dict, options, embed_names: list):
         super().__init__(
             options=options,
             placeholder="You can select an avatar...",
@@ -394,7 +427,7 @@ class AvatarSelect(discord.ui.Select):
             max_values=1,
         )
         self.embeds = {"All_avatars": None}
-        self.attachments = images
+        self.attachments: list = images.values()
         self.embed_names = embed_names
 
     async def callback(self, interaction: discord.Interaction):
@@ -465,7 +498,7 @@ class ClanSearchView(discord.ui.View):
             return True
         else:
             async with AsyncTranslator(
-                JO.get_lang_code(interaction.user.id)
+                DF.get_lang_code(interaction.user.id)
             ) as translator:
                 translator.install()
                 _ = translator.gettext
@@ -488,15 +521,20 @@ class Wolvesville(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.api_url = "https://api.wolvesville.com/"
-        self.api_caller = APICaller()
+        self.api_caller = WovAPICaller()
 
     async def cog_load(self):
         print("Wolvesville cog loaded successfully!")
 
-    @commands.command(aliases=["wov-clan", "w-clan", "wov-c", "wovc", "w-c"])
+    @commands.hybrid_command(
+        name="wov-clan",
+        description="Get information about a clan on Wolvesville",
+        with_app_command=True,
+        aliases=["w-clan", "wov-c", "wovc", "w-c"],
+    )
     async def wovclan(self, ctx, *, clan_name: str = None):
         async with AsyncTranslator(
-            JO.get_lang_code(ctx.message.author.id)
+            DF.get_lang_code(ctx.message.author.id)
         ) as translator:
             translator.install()
             _ = translator.gettext
@@ -514,8 +552,8 @@ class Wolvesville(commands.Cog):
             logger_clan_name = clan_name.encode("ascii", "ignore")
             logger_clan_name = logger_clan_name.decode()
             main_message = None
-            DF.add_command_stats(ctx.message.author.id)
-            clan_check = DF.cache_check("clan", "name", clan_name)
+            DF.add_to_command_stat(ctx.message.author.id)
+            clan_check = DF.check_wov_clan_cache_by_name(clan_name)
             if clan_check[0] is False:
                 logger.info(
                     f'Couldn\'t find "{logger_clan_name}" in cache. Making an API call.'
@@ -524,7 +562,7 @@ class Wolvesville(commands.Cog):
                 clan_dict = await self.api_caller.add_to_queue(
                     WovApiCall.get_clan_by_name, clan_name_search
                 )
-                clan_dict = await clan_dict
+                logger.debug(clan_dict)
                 if len(clan_dict) == 0 or clan_dict is None:
                     embedErr = discord.Embed(
                         title=_("Error"),
@@ -613,7 +651,7 @@ class Wolvesville(commands.Cog):
                     logger_clan_name = logger_clan_name.decode()
                     logger.info(f"They chose {logger_clan_name}")
                     description = dict_clan["description"]
-                    DF.json_caching("clan", dict_clan)
+                    DF.store_wov_clan_cache(dict_clan)
                     time_cached = dt.utcnow()
                     iso = time_cached.isoformat() + "Z"
                     dict_clan["caching_data"] = {}
@@ -621,15 +659,15 @@ class Wolvesville(commands.Cog):
                 else:
                     dict_clan = clan_dict[0]
                     description = dict_clan["description"]
-                    DF.json_caching("clan", dict_clan)
+                    DF.store_wov_clan_cache(dict_clan)
                     time_cached = dt.utcnow()
                     iso = time_cached.isoformat() + "Z"
                     dict_clan["caching_data"] = {}
                     dict_clan["caching_data"]["time_cached"] = str(iso)
             else:
                 logger.info(f'Found "{logger_clan_name}" in cache. Retrieving.')
-                clan_dict = JO.get_wov_clan_by_name(clan_name)
-                dict_clan, description = clan_dict[1], clan_dict[0]
+                clan_dict = DF.get_wov_clan_by_id(clan_check[1]["id"])
+                dict_clan, description = clan_dict[1][clan_check[1]["id"]], clan_dict[0]
 
             def embed_creation(dict_clan, description):
                 clan_name = re.sub(
@@ -647,11 +685,11 @@ class Wolvesville(commands.Cog):
                 clan_desc = surrogates.encode(description)
                 clan_desc = surrogates.decode(clan_desc)
                 try:
-                    timestamp = timestamp = dt.strptime(
+                    timestamp = dt.strptime(
                         dict_clan["caching_data"]["time_cached"],
                         "%Y-%m-%dT%H:%M:%S.%fZ",
                     )
-                except:
+                except Exception:
                     timestamp = dt.utcnow()
                 timestamp = timestamp.replace(tzinfo=pytz.UTC)
                 embed_clan = discord.Embed(
@@ -710,21 +748,14 @@ class Wolvesville(commands.Cog):
             else:
                 main_message = await ctx.send(file=file_thumbnail, embed=first_embed)
 
-            members_check = DF.cache_check(
-                type_of_search="id", what_to_search="clan_members", name=dict_clan["id"]
-            )
-            if members_check[0] is True:
-                member_list = JO.get_wov_clan_members(dict_clan["id"])
+            members_check = DF.check_wov_clan_members_cache(dict_clan["id"])
+            if members_check:
+                member_list = DF.get_wov_clan_members(dict_clan["id"])
             else:
                 member_list = await self.api_caller.add_to_queue(
                     WovApiCall.get_clan_members, dict_clan["id"]
                 )
-                member_list = await member_list
-                DF.json_caching(
-                    cache_type="clan_members",
-                    json_data=member_list,
-                    extra_data=dict_clan["id"],
-                )
+                DF.store_wov_clan_members_cache(dict_clan["id"], member_list)
             first_embed.remove_field(-1)
             clan_leader_str = _("**Leader:** ")
             co_leader_str = _("\n**---Co-leaders---**")
@@ -795,6 +826,7 @@ class Wolvesville(commands.Cog):
                     value=clan_leader_str + co_leader_str + members_str,
                     inline=False,
                 )
+            first_embed.set_footer(text="(there might be hidden members)")
             view = WovClan(
                 clan_json_data=dict_clan,
                 embed_func=embed_creation,
@@ -802,11 +834,19 @@ class Wolvesville(commands.Cog):
             )
             view.message = await main_message.edit(embed=first_embed, view=view)
 
-    @commands.command(aliases=["wov-player", "w-player", "wov-p", "wovp", "w-p"])
+    @commands.hybrid_command(
+        name="wov-player",
+        description="Shows information about a player on Wolvesville",
+        with_app_command=True,
+        aliases=["w-player", "wov-p", "wovp", "w-p"],
+    )
     async def wovplayer(
-        self, ctx: commands.Context, username: str = None, arg: str = None
+        self,
+        ctx: commands.Context,
+        username: str = None,
+        arg: Literal["profile", "avatars"] = None,
     ):
-        async with AsyncTranslator(JO.get_lang_code(ctx.author.id)) as at:
+        async with AsyncTranslator(DF.get_lang_code(ctx.author.id)) as at:
             at.install()
             _ = at.gettext
             previous_username = None
@@ -814,7 +854,7 @@ class Wolvesville(commands.Cog):
                 embedErr = discord.Embed(
                     title=_("Error"),
                     description=_(
-                        "No username provided. Correct syntax: `.wov-player {username}`"
+                        "No username provided. Correct syntax: `.wov-player <username>`"
                     ),
                     color=cfg.CustomColors.red,
                 )
@@ -830,17 +870,16 @@ class Wolvesville(commands.Cog):
                 )
                 await ctx.send(embed=embedErr)
                 return
-            cache_cck = DF.cache_check("user", "username", username)
+            cache_cck = DF.check_wov_user_cache_by_username(username)
             if cache_cck[0] is False:
                 logger.debug(
                     "Couldn't find %s in cache. Making an API call...", username
                 )
-                player_dict_future = await self.api_caller.add_to_queue(
+                player_dict = await self.api_caller.add_to_queue(
                     WovApiCall.get_user_by_name, username
                 )
-                player_dict = await player_dict_future
                 if player_dict is None:
-                    player_dict = DF.cache_check("user", "previous_username", username)
+                    player_dict = DF.check_wov_user_cache_by_prev_username(username)
                     if player_dict[0] is False:
                         embedErr = discord.Embed(
                             title=_("Error"),
@@ -851,7 +890,7 @@ class Wolvesville(commands.Cog):
                         )
                         await ctx.send(embed=embedErr)
                         return
-                    player_dict = JO.get_wov_player_by_prev_username(username)
+                    player_dict = DF.get_wov_player_by_prev_username(username)
                     player_dict, bio_first, previous_username = (
                         player_dict[1],
                         player_dict[0],
@@ -864,10 +903,10 @@ class Wolvesville(commands.Cog):
                         else "*No personal message found*"
                     )
 
-                DF.json_caching("user", player_dict)
+                DF.store_wov_user_cache(player_dict)
             else:
                 if username != cache_cck[1]["username"]:
-                    player_username_strict = JO.get_wov_player_by_username(username)
+                    player_username_strict = DF.get_wov_player_by_username(username)
                     if player_username_strict is None:
                         logger.debug(
                             "Couldn't find %s in cache. Making an API call...", username
@@ -877,7 +916,7 @@ class Wolvesville(commands.Cog):
                         )
                         player_dict = await player_dict_future
                         if player_dict is None:
-                            player_dict = JO.get_wov_player_by_username(
+                            player_dict = DF.get_wov_player_by_username(
                                 cache_cck[1]["username"]
                             )
                         else:
@@ -899,7 +938,7 @@ class Wolvesville(commands.Cog):
                             if view.value is None:
                                 return
                             elif view.value == cache_cck[1]["username"]:
-                                player_dict = JO.get_wov_player_by_prev_username(
+                                player_dict = DF.get_wov_player_by_prev_username(
                                     view.value
                                 )
                                 player_dict, bio_first, previous_username = (
@@ -914,7 +953,7 @@ class Wolvesville(commands.Cog):
                                     else "*No personal message found*",
                                     None,
                                 )
-                                DF.json_caching("user", player_dict)
+                                DF.store_wov_user_cache(player_dict)
                     else:
                         player_dict, bio_first, previous_username = (
                             player_username_strict[1],
@@ -922,7 +961,7 @@ class Wolvesville(commands.Cog):
                             player_username_strict[2],
                         )
                 else:
-                    player_dict = JO.get_wov_player_by_username(username)
+                    player_dict = DF.get_wov_player_by_username(username)
                     player_dict, bio_first, previous_username = (
                         player_dict[1],
                         player_dict[0],
@@ -936,22 +975,19 @@ class Wolvesville(commands.Cog):
             if (
                 dt.utcnow() - dt.strptime(caching_time, "%Y-%m-%dT%H:%M:%S.%fZ")
             ).days > 30:
-                WovFunc.history_caching(player_dict)
+                wolvesville.history_caching(player_dict)
                 player_dict = await self.api_caller.add_to_queue(
                     WovApiCall.get_user_by_id, player_dict["id"]
                 )
-                player_dict = await player_dict
                 bio_first = (
                     player_dict["personalMessage"]
                     if "personalMessage" in player_dict
                     else "*No personal message found*"
                 )
-                DF.json_caching("user", player_dict)
-            DF.add_command_stats(ctx.message.author.id)
+                DF.store_wov_user_cache(player_dict)
+            DF.add_to_command_stat(ctx.message.author.id)
             if arg in ["avatars", "avatar"]:
-                select_options, embed_names, attachments, avatar_functs, av_urls = (
-                    [],
-                    [],
+                select_options, embed_names, attachments = (
                     [],
                     [],
                     [],
@@ -966,21 +1002,23 @@ class Wolvesville(commands.Cog):
                     ),
                 )
                 main_message = await ctx.send(embed=avatar_embed)
-                for avatar in player_dict["avatars"]:
-                    if avatar["url"] in av_urls:
-                        av_urls.append(avatar["url"])
-                        continue
-                    avatar_functs.append(
-                        WovFunc.avatar_rendering(image_URL=avatar["url"], rank=False)
-                    )
-                    av_urls.append(avatar["url"])
                 time_before_rendering = dt.now()
-                attachments = await asyncio.gather(*avatar_functs)
-                print(dt.now() - time_before_rendering)
-                all_avatars_file = await WovFunc.all_avatars_rendering(
+                av_urls = [avatar["url"] for avatar in player_dict["avatars"]]
+                av_urls_wo_duplicates = list(dict.fromkeys(av_urls))
+                logger.debug(av_urls)
+                avatar_images: dict = await wolvesville.open_images_from_urls(
+                    av_urls_wo_duplicates
+                )
+
+                attachments: dict = await wolvesville.bulk_avatar_rendering(
+                    avatars=avatar_images, rank=False
+                )
+
+                all_avatars_file = wolvesville.all_avatars_rendering(
                     attachments, av_urls
                 )
-                attachments.insert(0, all_avatars_file)
+                print(dt.now() - time_before_rendering)
+                attachments["all_avatars"] = all_avatars_file
                 with BytesIO() as im_bin:
                     all_avatars_file.save(im_bin, "PNG")
                     im_bin.seek(0)
@@ -988,21 +1026,21 @@ class Wolvesville(commands.Cog):
                     avatar_embed.set_image(url="attachment://all_avatar.png")
                 # // del av_bg, avatar, lvlfont, one_ts_lvl_font, draw, main_avatars, avatar_dict, image_font
                 # // gc.collect()
-                for avatar in attachments:
-                    if attachments.index(avatar) == 0:
-                        select_options.append(
-                            discord.SelectOption(label=_("All avatars"))
+                avatar_counter = 1
+                for url, image in attachments.items():
+                    if url == "all_avatars":
+                        select_options.insert(
+                            0, discord.SelectOption(label=_("All avatars"))
                         )
-                        embed_names.append("All_avatars")
-                    else:
-                        select_options.append(
-                            discord.SelectOption(
-                                label=_("Avatar {num}").format(
-                                    num=attachments.index(avatar)
-                                )
-                            )
+                        embed_names.insert(0, "All_avatars")
+                        continue
+                    select_options.append(
+                        discord.SelectOption(
+                            label=_("Avatar {num}").format(num=avatar_counter)
                         )
-                        embed_names.append(f"Avatar_{attachments.index(avatar)}")
+                    )
+                    embed_names.append(f"Avatar_{avatar_counter}")
+                    avatar_counter += 1
                 avatar_embed.remove_field(0)
                 view = WovPlayerAvatars(
                     images=attachments,
@@ -1022,16 +1060,16 @@ class Wolvesville(commands.Cog):
                         "OFFLINE": [":black_circle:", "Invisible"],
                     }
                     try:
-                        thumbnail = await WovFunc.avatar_rendering(
-                            player_data["equippedAvatar"]["url"], player_data["level"]
+                        thumbnail = await wolvesville.avatar_rendering(
+                            await wolvesville.open_image_from_url(player_data["equippedAvatar"]["url"]), player_data["level"]
                         )
                     except KeyError:
-                        WovFunc.history_caching(player_data)
+                        wolvesville.history_caching(player_data)
                         player_data = await self.api_caller.add_to_queue(
                             WovApiCall.get_user_by_name, username
                         )
-                        DF.json_caching("user", player_data)
-                        thumbnail = await WovFunc.avatar_rendering(
+                        DF.store_wov_user_cache(player_data)
+                        thumbnail = await wolvesville.avatar_rendering(
                             player_data["equippedAvatar"]["url"], player_data["level"]
                         )
                     try:
@@ -1039,13 +1077,19 @@ class Wolvesville(commands.Cog):
                             player_data["caching_data"]["time_cached"],
                             "%Y-%m-%dT%H:%M:%S.%fZ",
                         )
-                    except:
+                    except Exception:
                         timestamp = dt.utcnow()
                     timestamp = timestamp.replace(tzinfo=pytz.UTC)
-                    embed_color = player_data["profileIconColor"]
+                    embed_color = (
+                        player_data["profileIconColor"]
+                        if "profileIconColor" in player_data
+                        else "#1f1f1f"
+                    )
                     embedPlayer = discord.Embed(
                         title=f"{player_data['username']}",
-                        description=f"Information I retrieved about {player_data['username']} on Wolvesville",
+                        description=_(
+                            "Information I retrieved about {username} on Wolvesville"
+                        ).format(username=player_data["username"]),
                         color=discord.Color.from_str(embed_color),
                         timestamp=timestamp,
                     )
@@ -1083,10 +1127,15 @@ class Wolvesville(commands.Cog):
                     embedPlayer.add_field(
                         name=_("Last online"), value=f"{lastOnlineFlag}"
                     )
-                    try:
-                        creationDate = f'<t:{calendar.timegm(dt.strptime(player_data["creationTime"], "%Y-%m-%dT%H:%M:%S.%fZ").timetuple())}:D>'
-                    except KeyError:
-                        creationDate = _("*Date is private*")
+                    if "creationTime" not in player_data:
+                        if "totalPlayTimeInMinutes" not in player_data:
+                            creationDate = _("*Date is private*")
+                        else:
+                            creationDate = _("August 3, 2018 or before")
+                    else:
+                        creationDate = timestamp_maker(
+                            player_data["creationTime"], TimestampFormats.LONG_DATE
+                        )
                     embedPlayer.add_field(
                         name=_("Creation date"), value=f"{creationDate}"
                     )
@@ -1261,7 +1310,9 @@ class Wolvesville(commands.Cog):
                     except KeyError:
                         clan_id = None
                     if clan_id is not None:
-                        clan_check = DF.cache_check("clan", "id", player_data["clanId"])
+                        clan_check = DF.check_wov_clan_cache_by_id(
+                            player_data["clanId"]
+                        )
                         if clan_check[0] is False:
                             logger.info(
                                 "Couldn't find clan in cache. Making an API call..."
@@ -1271,10 +1322,17 @@ class Wolvesville(commands.Cog):
                             )
                             clan_dict = await clan_dict_future
                             clan_desc = clan_dict["description"]
-                            DF.json_caching("clan", clan_dict)
+                            DF.store_wov_clan_cache(clan_dict)
                         else:
-                            clan_dict = JO.get_wov_clan_by_id(player_data["clanId"])
-                            clan_desc, clan_dict = clan_dict[0], clan_dict[1]
+                            clan_dict = DF.get_wov_clan_by_id(player_data["clanId"])
+                            clan_desc, clan_dict = (
+                                clan_dict[0],
+                                clan_dict[1][player_data["clanId"]],
+                            )
+                            if "caching_data" not in clan_dict:
+                                clan_dict["caching_data"] = {
+                                    "time_cached": "2018-08-03T00:00:00.000Z"
+                                }
                             if (
                                 dt.utcnow()
                                 - dt.strptime(
@@ -1282,23 +1340,25 @@ class Wolvesville(commands.Cog):
                                     "%Y-%m-%dT%H:%M:%S.%fZ",
                                 )
                             ).days > 30:
-                                clan_dict = await WovApiCall.get_clan_by_id(
+                                new_clan_dict = await WovApiCall.get_clan_by_id(
                                     player_data["clanId"]
                                 )
-                                DF.json_caching("clan", clan_dict)
-                                clan_desc = clan_dict["description"]
+                                clan_desc = new_clan_dict["description"]
+                                DF.store_wov_clan_cache(new_clan_dict)
 
                         clan_desc = surrogates.encode(clan_desc)
                         clan_desc = surrogates.decode(clan_desc)
-                        clan_desc = clan_desc.split("\n")
-                        clan_desc = clan_desc[0]
+                        clan_desc = clan_desc.split("\n")[0]  # Get first line
                         # // clan_desc.encode(encoding="utf8").decode()
-                        c_tag = re.sub(
-                            "u([0-9a-f]{4})",
-                            lambda m: chr(int(m.group(1), 16)),
-                            clan_dict["tag"],
-                        )
-                        c_tag = surrogates.decode(c_tag)
+                        if 'tag' in clan_dict: # Apparently, some clans don't have a tag
+                            c_tag = re.sub(
+                                "u([0-9a-f]{4})",
+                                lambda m: chr(int(m.group(1), 16)),
+                                clan_dict["tag"],
+                            )
+                            c_tag = surrogates.decode(c_tag)
+                        else:
+                            c_tag = ' '
                         clan_name = re.sub(
                             "u([0-9a-f]{4})",
                             lambda m: chr(int(m.group(1), 16)),
@@ -1339,7 +1399,7 @@ class Wolvesville(commands.Cog):
                             days = 30
                     else:
                         days = 30
-                except:
+                except Exception:
                     days = 30
                 view = WovPlayer(
                     embed_func=embed_creation,

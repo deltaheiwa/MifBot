@@ -11,5 +11,6 @@ class BattleMissingArgumentsError(Exception):
     def __str__(self):
         return f'{self.argument}: {self.value} -> {self.message}'
 
+
 class NotAuthorizedError(CheckFailure):
     pass

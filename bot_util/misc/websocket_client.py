@@ -1,5 +1,6 @@
 from typing import Any, Dict
 import websockets
+import websockets.exceptions
 import asyncio
 import json
 import logging
@@ -15,13 +16,13 @@ class WebSocketClient:
         self.uri: str = "ws://localhost:8080"
         self.ws: websockets.WebSocketClientProtocol | None = None
         self.loop = asyncio.get_event_loop()
-    
+
     async def heartbeat(self):
         while True:
             try:
                 if self.ws:
                     await self.ws.ping()
-                    await asyncio.sleep(10)  
+                    await asyncio.sleep(10)
                 else:
 
                     await asyncio.sleep(1)
@@ -76,7 +77,7 @@ class WebSocketClient:
             await self.ws.close()
 
     def run(self):
-        self.loop.run_until_complete( 
+        self.loop.run_until_complete(
             asyncio.gather(
                 self.connect(),
                 self.heartbeat

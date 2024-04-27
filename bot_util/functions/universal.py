@@ -12,12 +12,16 @@ from datetime import (
 from typing import Literal, Any, Union
 
 from PIL import Image, ImageDraw
+from colormath.color_objects import sRGBColor, LabColor
+from colormath.color_conversions import convert_color
 
+from bot_util.enums import TimestampFormats
 from bot_util.misc import Logger
 from bot_util import bot_config
-
+from telegram_helper.main import MifTelegramReporter
 
 logger = Logger(__name__, log_file_path=bot_config.LogFiles.functions_log)
+
 
 def get_directory_structure(startpath="."):
     excluded_dirs = {
@@ -189,29 +193,33 @@ subscript_map = {
     ")": "₎",
 }
 
-
 sub_trans = str.maketrans(
     "".join(subscript_map.keys()), "".join(subscript_map.values())
 )
 
 
-def sub_sup_text(type: Literal["sub", "sup"], text: str) -> str:
+def sub_sup_text(replace_type: Literal["sub", "sup"], text: str) -> str:
     """
     Converts a text into subscript or superscript. Use "sub" for subscript and "sup" for superscript
     """
-    if type == "sub":
+    if replace_type == "sub":
         return text.translate(sub_trans)
-    elif type == "sup":
+    elif replace_type == "sup":
         return text.translate(trans)
 
+
 def percentage_calc(
-    full_value: int, percentage: int, if_round: bool = False, round_to: int = 2
+        full_value: int, percentage: int, if_round: bool = False, round_to: int = 2
 ):
     """Calculates percentage of the given value
 
     Args:
         full_value (int): Full value to calculate the percentage of
         percentage (int): Percentage itself
+
+    Keyword args:
+        if_round (bool): If the result should be rounded
+        round_to (int): Number of decimal places to round to
 
     Returns:
         float: Part of the full value by percentage+-+-
@@ -238,7 +246,7 @@ def repeating_symbols(text: str) -> bool:
 
 
 def regulated_request(
-    url: str, sleep_time: float = 0.5, backoff_time: float = 10.0, **kwargs: Any
+        url: str, sleep_time: float = 0.5, backoff_time: float = 10.0, **kwargs: Any
 ) -> requests.Response:
     resp: requests.Response = requests.get(url, **kwargs)
     if resp.status_code == 429:
@@ -312,6 +320,7 @@ def timestamp_calculate(objT: Union[str, dt], type_of_format: str) -> str:
         raise AttributeError("Unknown format. Received {}".format(type_of_format))
     return complete
 
+
 def level_rank(level: int) -> int | str:
     if level < 0:
         return "no"
@@ -358,18 +367,19 @@ def round_edges(im, radius):
     im.putalpha(alpha)
     return im
 
+
 def pretty_date(time: Union[int, str, dt], time_utc=True):
     """
     Returns a human-readable string representing the time difference between the current time and the provided time.
-    
+
     Parameters:
         time (int or str or datetime): The time to calculate the difference from. It can be an integer representing a timestamp, a string in ISO format, or a datetime object.
         time_utc (bool, optional): Whether the provided time is in UTC. Defaults to True.
-    
+
     Returns:
         str: A string representing the time difference. Examples include: "just now", "5 seconds ago", "2 minutes ago", "an hour ago", "Yesterday", "3 days ago", "a week ago", "2 weeks ago", "a month ago", "3 months ago", "a year ago", "2 years ago", or an empty string if the provided time is in the future.
     """
-    
+
     now = dt.utcnow() if time_utc else dt.now()
 
     if isinstance(time, int):
@@ -393,7 +403,7 @@ def pretty_date(time: Union[int, str, dt], time_utc=True):
         time = time.replace(tzinfo=pytz.utc)
     elif time.tzinfo is None:
         time = time.replace(tzinfo=pytz.utc)
-    
+
     diff = now - time
     seconds_diff = diff.total_seconds()
     days_diff = diff.days
@@ -430,6 +440,7 @@ def pretty_date(time: Union[int, str, dt], time_utc=True):
         return "a year ago"
     return str(round(days_diff / 365)) + " years ago"
 
+
 def pretty_time_delta(seconds: int, time_delta: timedelta = None):
     if time_delta:
         seconds = time_delta.total_seconds()
@@ -457,6 +468,7 @@ def pretty_time_delta(seconds: int, time_delta: timedelta = None):
     else:
         return "%s%ds" % (sign_string, seconds)
 
+
 def countdown_timer(total_milliseconds):
     if total_milliseconds < 0:
         return "∞"
@@ -469,3 +481,81 @@ def countdown_timer(total_milliseconds):
     else:
         # If more than or equal to 20 seconds, show minutes and seconds
         return f"{int(minutes):02}:{int(seconds):02}"
+
+
+def random_hexadecimal() -> str:
+    """Returns a random hexadecimal color"""
+    return "".join(random.choices("0123456789ABCDEF", k=6))
+
+
+def timestamp_maker(time: dt | str | int, ts_format: TimestampFormats | str) -> str:
+    """Returns a markdown timestamp based on the given time"""
+    if isinstance(ts_format, str):
+        ts_format = TimestampFormats(ts_format)
+    if isinstance(time, str):
+        time = dt.fromisoformat(time)
+    if isinstance(time, int):
+        time = dt.fromtimestamp(time)
+    return f"<t:{int(time.timestamp())}:{ts_format.value}>"
+
+
+def blank_function(arg):
+    return arg
+
+
+def get_closest_color(hex_code: str) -> str:
+    """Returns the closest color name based on the given hexadecimal color code"""
+    colors_lab = {
+        "red": LabColor(53.24, 80.09, 67.2),
+        "green": LabColor(46.23, -51.7, 49.9),
+        "blue": LabColor(32.3, 79.19, -107.86),
+        "yellow": LabColor(97.14, -21.55, 94.48),
+        "orange": LabColor(74.94, 23.93, 78.95),
+        "purple": LabColor(29.78, 58.93, -36.49),
+        "brown": LabColor(42.28, 38.99, 33.13),
+        "black": LabColor(0, 0, 0),
+        "white": LabColor(100, 0, 0),
+        "grey": LabColor(53.59, 0, 0),
+        "cyan": LabColor(91.11, -48.09, -14.13),
+        "pink": LabColor(76.6, 42.85, -12.39),
+    }
+
+    logger.debug(f"Hex code: {hex_code}")
+    rgb = sRGBColor.new_from_rgb_hex(hex_code)
+    logger.debug(f"RGB: {rgb}")
+    lab = convert_color(rgb, LabColor)
+    logger.debug(f"LAB: {lab}")
+
+    def color_distance(lab1, lab2):
+        delta_e = math.sqrt((lab2.lab_l - lab1.lab_l) ** 2 +
+                            (lab2.lab_a - lab1.lab_a) ** 2 +
+                            (lab2.lab_b - lab1.lab_b) ** 2)
+        logger.debug(f"Delta E: {delta_e}")
+        return delta_e
+
+    closest_color = min(
+        colors_lab, key=lambda color: color_distance(colors_lab[color], lab)
+    )
+    logger.debug(f"Closest color: {closest_color}")
+
+    return closest_color
+
+
+async def send_report_exc(error: Exception, error_message: str = None, **kwargs) -> None:
+    """
+    Sends an exception report to the telegram chat.
+
+    :keyword func: Function from which the report is sent.
+    :keyword line: Line on which the exception happened. Provide it as `e.__traceback__.tb_lineno`
+    :keyword ctx: Context object.
+    """
+    telegram_bot = MifTelegramReporter()
+    await telegram_bot.send_automatic_exception(
+        error, func=kwargs.get("func"), line=kwargs.get("line"), extra=error_message, ctx=kwargs.get("ctx")
+    )
+
+
+async def send_report(message: str, *args) -> None:
+    """Sends a message report to the telegram chat"""
+    telegram_bot = MifTelegramReporter()
+    await telegram_bot.send_message_report(message + " " + " ".join(args))

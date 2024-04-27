@@ -1,36 +1,26 @@
+from datetime import datetime as dt
+import os
 import shutil
 import subprocess
-import sys
+
 import aiohttp
 import discord
 from discord.ext import commands
+
 import bot_util.bot_config as b_cfg
-import logging
-from bot_util.bot_functions import CustomFormatter, dev_command, get_directory_structure
-from bot_util.bot_exceptions import NotAuthorizedError
-import coloredlogs
-from db_data.database_main import Databases, PrefixDatabase, GameDb
+from bot_util.misc import Logger
+from bot_util.functions.universal import get_directory_structure
+from bot_util.functions.wolvesville import dump_quests
+from bot_util.exceptions import NotAuthorizedError
+from bot_util.decorators import dev_command
+from db_data.database_main import Databases, GameDb
 from telegram_helper.main import MifTelegramReporter
-import get_sheets
-from db_data import mysql_main
-import sqlite3
-import os
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s:%(levelname)s --- %(message)s")
-console_formatter = CustomFormatter()
-stream_handler = logging.StreamHandler()
-coloredlogs.install(level="DEBUG", logger=logger)
-file_handler_debug = logging.FileHandler(b_cfg.LogFiles.special_log)
-file_handler_debug.setFormatter(formatter)
-stream_handler.setFormatter(console_formatter)
-logger.addHandler(file_handler_debug)
+# import get_sheets
+from db_data import psql_main
 
-if os.path.exists("vg_ext"):
-    from vg_ext.database.connector import PUDBConnector
-else:
-    logger.warning("vg_ext not found")
+
+logger = Logger(__name__, log_file_path=b_cfg.LogFiles.special_log)
 
 
 class ConfirmView(discord.ui.View):
@@ -49,7 +39,7 @@ class ConfirmView(discord.ui.View):
         self.value = True
         self.stop()
 
-        self.disable_all_buttons()
+        await self.disable_all_buttons()
         await interaction.response.edit_message(view=self)
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
@@ -57,7 +47,7 @@ class ConfirmView(discord.ui.View):
         self.value = False
         self.stop()
 
-        self.disable_all_buttons()
+        await self.disable_all_buttons()
         await interaction.response.edit_message(view=self)
 
     async def interaction_check(self, interaction: discord.Interaction):
@@ -67,7 +57,7 @@ class ConfirmView(discord.ui.View):
             raise NotAuthorizedError("You are not authorized to use this command")
 
     async def on_timeout(self):
-        self.disable_all_buttons()
+        await self.disable_all_buttons()
         await self.message.edit(view=self)
 
         self.value = False
@@ -81,6 +71,21 @@ class Special(commands.Cog):
 
     async def cog_load(self):
         print("Special cog loaded successfully!")
+
+    @commands.command()
+    @dev_command()
+    async def wovseason(self, ctx: commands.Context, month, day):
+        reset_date = dt(dt.today().year, int(month), int(day), 3)
+        b_cfg.wov_season_resets.append(reset_date)
+        await ctx.send(f"Added {reset_date} as Wov season reset")
+        logger.debug(b_cfg.wov_season_resets)
+
+    @commands.command()
+    @dev_command()
+    async def update_wov_quests(self, ctx: commands.Context):
+        await ctx.send("Updating quests...")
+        await dump_quests()
+        await ctx.send("Updated quests!")
 
     @commands.command(aliases=["resources"])
     @dev_command()
@@ -119,13 +124,13 @@ class Special(commands.Cog):
         aliases=["rc", "r-c", "reload-c", "reloadc"],
     )
     @dev_command()
-    async def reloadCog(self, ctx: commands.Context, cog):
+    async def reloadCog(self, ctx: commands.Context, cog: str):
         try:
-            await self.bot.reload_extension(f"cogs.{cog.capitalize()}")
+            await self.bot.reload_extension(f"cogs.{cog}")
             await ctx.send(f"Reloaded cog {cog}")
         except Exception as e:
             await ctx.send(f"Couldn't reload cog {cog}")
-            logger.error(e)
+            logger.exception(e)
 
     @commands.command()
     @dev_command()
@@ -135,9 +140,9 @@ class Special(commands.Cog):
         )
 
         try:
-            # subprocess.run(
-            #    [script_path], check=True, shell=True if os.name == "nt" else False
-            # )
+            subprocess.run(
+                [script_path], check=True, shell=True if os.name == "nt" else False
+            )
             await ctx.send("Bot restarted")
             await self.bot.stop()
         except Exception as e:
@@ -240,21 +245,13 @@ class Special(commands.Cog):
     @dev_command()
     async def database(self, ctx, arg, arg2=None, arg3=None):
         match arg:
-            case "mysql":
+            case "postgres":
                 match arg2:
                     case "mif":
                         match arg3:
                             case "create":
-                                mysql_main.DatabaseFunctions.create_tables()
+                                psql_main.DatabaseFunctions.create_tables()
                                 await ctx.reply("Created tables")
-                    case "mif_vg":
-                        match arg3:
-                            case "create":
-                                try:
-                                    PUDBConnector.create_tables()
-                                    await ctx.reply("Created tables")
-                                except Exception as e:
-                                    await ctx.reply(f"Error: {e}")
             case "local":
                 match arg2:
                     case "game":
@@ -268,101 +265,82 @@ class Special(commands.Cog):
 
             case "help":
                 await ctx.reply(
-                    "```database <mysql/local> <mif/mif_vg|game> <create|drop/init>```"
+                    "```database <mysql/local> <mif|game> <create|drop/init>```"
                 )
 
-    @commands.cooldown(1, 60, commands.BucketType.user)
-    @commands.command()
-    @dev_command()
-    async def update(self, ctx, tabledb=None, obj_id=None):
-        """Update the the database with the latest data from sheets.
+    # @commands.cooldown(1, 60, commands.BucketType.user)
+    # @commands.command()
+    # @dev_command()
+    # async def update(self, ctx, tabledb=None, obj_id=None):
+    #     '''Update the the database with the latest data from sheets.
 
-        Args:
-            tabledb (str, optional): table to update. If None, inserts new objects to all tables. Defaults to None.
-            obj_id (str/int, optional): item id to update. If None, updates all items in the table. Defaults to None.
-        """
-        try:
-            get_sheets.run()
+    #     Args:
+    #         tabledb (str, optional): table to update. If None, inserts new objects to all tables. Defaults to None.
+    #         obj_id (str/int, optional): item id to update. If None, updates all items in the table. Defaults to None.
+    #     '''
+    #     try:
+    #         get_sheets.run()
+    #         def table_update(type_of_update, table, start_id, end_id=-1):
+    #             sheets_data = get_sheets.SheetsData().return_section(table)
+    #             new_records = []
+    #             id_list = []
+    #             if end_id == -1:
+    #                 end_id = len(sheets_data)
+    #             for ids in range(start_id, end_id):
+    #                 data = []
+    #                 for cell in sheets_data[ids]:
+    #                     data.append(cell)
+    #                 if type_of_update == "update":
+    #                     data.append(sheets_data[ids][0])
+    #                 new_records.append(tuple(data))
+    #                 id_list.append(str(ids))
 
-            def table_update(type_of_update, table, start_id, end_id=-1):
-                sheets_data = get_sheets.SheetsData().return_section(table)
-                new_records = []
-                id_list = []
-                if end_id == -1:
-                    end_id = len(sheets_data)
-                for ids in range(start_id, end_id):
-                    data = []
-                    for cell in sheets_data[ids]:
-                        data.append(cell)
-                    if type_of_update == "update":
-                        data.append(sheets_data[ids][0])
-                    new_records.append(tuple(data))
-                    id_list.append(str(ids))
+    #             question_marks = "?"*len(sheets_data[0])
+    #             question_marks = ','.join(question_marks)
 
-                question_marks = "?" * len(sheets_data[0])
-                question_marks = ",".join(question_marks)
+    #             if type_of_update == "insert":
+    #                 executemany_query = f"INSERT INTO {table} VALUES ({question_marks});"
+    #             else:
+    #                 set_dict = {"weapons": "id = ?, name = ?, description = ?, damage = ?, second_attack = ?, special_ability = ?, element = ?, rarity = ?, weapon_type = ?, value = ?, craft = ?, drops = ?, image = ?, crit_chance = ?",
+    #                             "armors": "id = ?, name = ?, description = ?, armor_points = ?, armor_resistance = ?, armor_type = ?, special_ability = ?, element = ?, rarity = ?, set_bonus = ?, value = ?, craft = ?, drops = ?, image = ?",
+    #                             "enemies": "id = ?, name = ?, description = ?, damage = ?, hp = ?, element = ?, weapon = ?, armor = ?, second_action = ?, third_action = ?, passive_ability = ?, special_ability = ?, drops = ?, image = ?",
+    #                             "characters": "id = ?, name = ?, description = ?, damage = ?, hp = ?, element = ?, weapon = ?, armor = ?, second_action = ?, third_action = ?, passive_ability = ?, special_ability = ?, craft = ?, drops = ?, image = ?",
+    #                             "general_items": "id = ?, name = ?, description = ?, item_type = ?, value = ?, rarity = ?, crafted_by = ?, craft = ?, crafted_on = ?, drops = ?, image = ?, max_stock = ?",
+    #                             "artefacts": "id = ?, name = ?, description = ?, passive_effect = ?, active_effect = ?, synergy = ?, element = ?, rarity = ?, value = ?, craft = ?, drops = ?, image = ?"}
+    #                 executemany_query = f"UPDATE {table} SET {set_dict[table]} WHERE id = ?;"
+    #             if len(new_records) == 1:
+    #                 new_records = new_records[0]
+    #                 c.executemany(executemany_query, (new_records,))
+    #             else:
+    #                 c.executemany(executemany_query, new_records)
+    #         with sqlite3.connect(Databases.game) as conn:
+    #             c = conn.cursor()
+    #             tables = ['armors', 'weapons', 'enemies', 'characters', 'general_items', "artefacts"]
+    #             if tabledb is not None and (tabledb) in tables:
+    #                 if obj_id is None:
+    #                     table_update("update", tabledb, 0, -1)
+    #                 else:
+    #                     table_update("update", tabledb, int(obj_id), int(obj_id)+1)
+    #             else:
+    #                 for table_name in tables:
+    #                     c.execute(f"SELECT id FROM {table_name} ORDER BY id DESC LIMIT 1;")
 
-                if type_of_update == "insert":
-                    executemany_query = (
-                        f"INSERT INTO {table} VALUES ({question_marks});"
-                    )
-                else:
-                    set_dict = {
-                        "weapons": "id = ?, name = ?, description = ?, damage = ?, second_attack = ?, special_ability = ?, element = ?, rarity = ?, weapon_type = ?, value = ?, craft = ?, drops = ?, image = ?, crit_chance = ?",
-                        "armors": "id = ?, name = ?, description = ?, armor_points = ?, armor_resistance = ?, armor_type = ?, special_ability = ?, element = ?, rarity = ?, set_bonus = ?, value = ?, craft = ?, drops = ?, image = ?",
-                        "enemies": "id = ?, name = ?, description = ?, damage = ?, hp = ?, element = ?, weapon = ?, armor = ?, second_action = ?, third_action = ?, passive_ability = ?, special_ability = ?, drops = ?, image = ?",
-                        "characters": "id = ?, name = ?, description = ?, damage = ?, hp = ?, element = ?, weapon = ?, armor = ?, second_action = ?, third_action = ?, passive_ability = ?, special_ability = ?, craft = ?, drops = ?, image = ?",
-                        "general_items": "id = ?, name = ?, description = ?, item_type = ?, value = ?, rarity = ?, crafted_by = ?, craft = ?, crafted_on = ?, drops = ?, image = ?, max_stock = ?",
-                        "artefacts": "id = ?, name = ?, description = ?, passive_effect = ?, active_effect = ?, synergy = ?, element = ?, rarity = ?, value = ?, craft = ?, drops = ?, image = ?",
-                    }
-                    executemany_query = (
-                        f"UPDATE {table} SET {set_dict[table]} WHERE id = ?;"
-                    )
-                if len(new_records) == 1:
-                    new_records = new_records[0]
-                    c.executemany(executemany_query, (new_records,))
-                else:
-                    c.executemany(executemany_query, new_records)
+    #                     last_record = c.fetchone()
+    #                     sheets_data = get_sheets.SheetsData().return_section(table_name)
 
-            with sqlite3.connect(Databases.game) as conn:
-                c = conn.cursor()
-                tables = [
-                    "armors",
-                    "weapons",
-                    "enemies",
-                    "characters",
-                    "general_items",
-                    "artefacts",
-                ]
-                if tabledb is not None and (tabledb) in tables:
-                    if obj_id is None:
-                        table_update("update", tabledb, 0, -1)
-                    else:
-                        table_update("update", tabledb, int(obj_id), int(obj_id) + 1)
-                else:
-                    for table_name in tables:
-                        c.execute(
-                            f"SELECT id FROM {table_name} ORDER BY id DESC LIMIT 1;"
-                        )
+    #                     if last_record is not None and last_record[0] == int(sheets_data[-1][0]):
+    #                         continue
+    #                     next_id = 0
+    #                     if last_record is not None:
+    #                         next_id = int(last_record[0]) + 1
+    #                     table_update("insert", table_name, next_id, -1)
 
-                        last_record = c.fetchone()
-                        sheets_data = get_sheets.SheetsData().return_section(table_name)
+    #         await ctx.send("Updated successfully")
+    #     except Exception as e:
+    #         logger.exception("Error updating sheets")
+    #         await ctx.send(f"ERROR!\n{e}")
 
-                        if last_record is not None and last_record[0] == int(
-                            sheets_data[-1][0]
-                        ):
-                            continue
-                        next_id = 0
-                        if last_record is not None:
-                            next_id = int(last_record[0]) + 1
-                        table_update("insert", table_name, next_id, -1)
-
-            await ctx.send("Updated successfully")
-        except Exception as e:
-            logger.exception("Error updating sheets")
-            await ctx.send(f"ERROR!\n{e}")
-
-        get_sheets.delete_cache()
+    #     get_sheets.delete_cache()
 
     @commands.hybrid_command(
         aliases=[],
@@ -454,7 +432,7 @@ class Special(commands.Cog):
         )
         embed.add_field(
             name="database <type> <subcommand> [action]",
-            value="Interacts with the bot's database. Arguments: `<type>` - type of database ('mysql' or 'local'), `<subcommand>` - specific command for the database, `[action]` - optional action like 'create', 'drop', 'init'. Usage: `.database mysql mif create`",
+            value="Interacts with the bot's database. Arguments: `<type>` - type of database ('postgres' or 'local'), `<subcommand>` - specific command for the database, `[action]` - optional action like 'create', 'drop', 'init'. Usage: `.database mysql mif create`",
             inline=False,
         )
         embed.add_field(
@@ -465,6 +443,11 @@ class Special(commands.Cog):
         embed.add_field(
             name="information",
             value="Gets information about the bot. No arguments needed.",
+            inline=False,
+        )
+        embed.add_field(
+            name="wovseason",
+            value="Add a datetime object to season resets list. Example: `.wovseason <month> <day>`",
             inline=False,
         )
 
